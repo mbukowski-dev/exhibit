@@ -2,7 +2,7 @@ import type { LanguageModel } from "ai";
 import { generateObjectWithRetry } from "./llm.js";
 import { z } from "zod";
 import type { VerificationContext } from "./context.js";
-import { renderContext } from "./prompt.js";
+import { renderContext, UNTRUSTED_DATA_RULE } from "./prompt.js";
 import type { Review } from "./review.js";
 import { providerOptionsFor, type EffortConfig } from "./effort.js";
 import type { UsageMeter } from "./usage.js";
@@ -43,7 +43,8 @@ Rules:
   its expected results can be seen on the page.
 - If an AC cannot be checked in a browser at all, still add a scenario and fill notTestableInBrowser.
 - Do not invent features that are not in the ticket or the diff.
-Write in the language of the ticket.`;
+Write in the language of the ticket.
+${UNTRUSTED_DATA_RULE}`;
 
 /** E3-1 (scenarios mapped to AC) and E3-2 (risk-based priority + limit). */
 export async function planVerification(

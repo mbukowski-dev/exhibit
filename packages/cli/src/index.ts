@@ -296,7 +296,13 @@ function printContext(ctx: VerificationContext, { compact = false } = {}) {
     console.log(dim(changeLine));
   } else {
     console.log(bold(`\nAcceptance criteria (${criteria.length})`));
-    for (const ac of criteria) console.log(`  ${ac.id}  ${ac.text}  ${dim(`[${ac.source}]`)}`);
+    for (const ac of criteria) {
+      console.log(`  ${ac.id}  ${ac.text}  ${dim(`[${ac.source}]`)}`);
+      if (ac.changedBy) {
+        const was = ac.changedBy.previousText ? ` (was: ${ac.changedBy.previousText})` : "";
+        console.log(dim(`       ✏️  changed in a comment by ${ac.changedBy.author}, ${ac.changedBy.created.slice(0, 10)}${was}`));
+      }
+    }
     if (!criteria.length) console.log(dim("  (none)"));
     if (ticket.comments.length) console.log(dim(`\n${ticket.comments.length} comment(s) on the ticket`));
     console.log(bold(`\n${changeLine}`));

@@ -4,6 +4,7 @@ import type { ExhibitConfig } from "./config.js";
 import type { ChangeSet } from "./diff.js";
 import type { Ticket } from "./jira.js";
 import { budgetDiff } from "./diff-budget.js";
+import { reconcileWithComments } from "./reconcile.js";
 import { detectTicketKey } from "./ticket.js";
 import type { UsageMeter } from "./usage.js";
 
@@ -58,6 +59,15 @@ export async function buildContext(opts: BuildContextOptions): Promise<Verificat
     } else {
       warnings.push(`${key} has no explicit acceptance criteria (no model key set, so none were inferred).`);
     }
+  } else if (opts.model && ticket.comments.length) {
+    // Criteria come from the description; later comments may have changed them.
+    // (Inferred criteria already took the comments into account.)
+    opts.meter?.assertBudget("reconcile criteria with comments");
+    const r = await reconcileWithComments(ticket, criteria, opts.model, opts.config.model.effort);
+    opts.meter?.add("reconcile-ac", r.usage);
+    criteria = r.criteria;
+    warnings.push(...r.notes);
+    if (r.rejected) warnings.push(`${r.rejected} proposed requirement change(s) from comments were ignored: the quoted words were not found in the comment.`);
   }
   // E11-3: fit the diff into the model budget by relevance to the criteria.
   const budget = budgetDiff(opts.changes.diff, {

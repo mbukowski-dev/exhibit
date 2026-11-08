@@ -60,7 +60,9 @@ export function renderMarkdownReport(r: RunReport, links: MarkdownLinks = {}): s
   out.push("");
   out.push("| | Acceptance criterion | Evidence |", "|---|---|---|");
   for (const c of v.criteria) {
-    out.push(`| ${ICON[c.verdict]} | **${c.acId}** ${cell(c.text, 160)} | ${cell(c.summary)} |`);
+    const ac = r.criteria.find((a) => a.id === c.acId);
+    const changed = ac?.changedBy ? ` <br>✏️ _changed in a ticket comment by ${cell(ac.changedBy.author, 60)} (${ac.changedBy.created.slice(0, 10)})_` : "";
+    out.push(`| ${ICON[c.verdict]} | **${c.acId}** ${cell(c.text, 160)}${changed} | ${cell(c.summary)} |`);
   }
 
   if (r.review.coverage.length || r.review.risks.length) {

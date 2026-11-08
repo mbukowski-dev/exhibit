@@ -6,7 +6,9 @@ import { providerOptionsFor, type EffortConfig } from "./effort.js";
 export interface AcceptanceCriterion {
   id: string; // AC1, AC2, ...
   text: string;
-  source: "field" | "section" | "gherkin" | "llm";
+  source: "field" | "section" | "gherkin" | "llm" | "comment";
+  /** Set when a later ticket comment changed (or added) this criterion. */
+  changedBy?: { author: string; created: string; quote: string; previousText?: string };
 }
 
 const SECTION_HEADING =
