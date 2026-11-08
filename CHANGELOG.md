@@ -1,8 +1,9 @@
 # Changelog
 
-## Unreleased
+## 0.3.0
 
 - Acceptance criteria are reconciled with later ticket comments (each change quotes the comment and is verified).
+- `exhibit --version` reads the version from package.json, so it always matches the release.
 - The pull request title and description are given to the model as the developer's claim; ticket, PR and diff text are treated as data, never as instructions.
 
 ## 0.2.1 — first public version

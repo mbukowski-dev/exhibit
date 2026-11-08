@@ -2,6 +2,10 @@
 import { appendFile, readFile } from "node:fs/promises";
 import { basename, relative, resolve } from "node:path";
 import { Command } from "commander";
+import { createRequire } from "node:module";
+
+// Single source of truth for the version: packages/cli/package.json (works from src/ and dist/).
+const CLI_VERSION: string = createRequire(import.meta.url)("../package.json").version;
 import {
   buildContext,
   createMeter,
@@ -115,7 +119,7 @@ async function loadContext(opts: SourceOptions, config: ExhibitConfig, meter?: U
 const program = new Command()
   .name("exhibit")
   .description("Verify that a change does what its ticket promised.")
-  .version("0.2.0");
+  .version(CLI_VERSION);
 
 withSourceOptions(program.command("context"))
   .description("Show the ticket, acceptance criteria and diff Exhibit would verify")
