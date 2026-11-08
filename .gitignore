@@ -5,3 +5,4 @@ exhibit-artifacts
 *.log
 packages/core/test/.gen-*
 test-results
+internal/
