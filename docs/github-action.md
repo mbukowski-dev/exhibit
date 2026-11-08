@@ -17,7 +17,7 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1 — .exhibit.yml and login scripts live in your repo
-      - uses: Lulek77777/exhibit@56b2dcee9098751fd748870fc427de99c7d6cb5d  # v0.1.2 — always pin a full SHA, see SECURITY.md
+      - uses: Lulek77777/exhibit@1001d2b3114af18a218c5fe09fbe81549675e9f6  # v0.2.0 — always pin a full SHA, see SECURITY.md
         with:
           preview-url: https://myapp-git-{branch}-acme.vercel.app
           anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}

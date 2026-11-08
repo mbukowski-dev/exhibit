@@ -36,7 +36,7 @@ logs and reports. Review your provider's data-retention terms before using Exhib
 - Store keys and test-account credentials as **repository secrets**; never commit them.
 - Pull requests from **forks do not receive secrets**, so Exhibit cannot run (or spend your API budget)
   on them.
-- **Pin the action to a full commit SHA** (`Lulek77777/exhibit@<40-character sha>  # v0.1.2`), never to
+- **Pin the action to a full commit SHA** (`Lulek77777/exhibit@<40-character sha>  # v0.2.0`), never to
   `@main` or a bare tag. The action runs with your secrets. A commit SHA cannot be changed by anyone —
   including us, or someone who took over our account — so you only ever run code you chose. Update the SHA
   deliberately (Dependabot can propose it).
