@@ -1,0 +1,17 @@
+{
+  "name": "@exhibit/cli",
+  "version": "0.2.0",
+  "license": "BUSL-1.1",
+  "type": "module",
+  "bin": {
+    "exhibit": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@exhibit/core": "workspace:*",
+    "commander": "^12.1.0"
+  }
+}

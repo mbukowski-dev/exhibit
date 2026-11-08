@@ -1,0 +1,11 @@
+node_modules
+dist
+.env
+exhibit-artifacts
+*.log
+exhibit-artifacts
+packages/core/test/.gen-*
+test-results
+
+# Private planning, business and sales material (separate private repo)
+internal/

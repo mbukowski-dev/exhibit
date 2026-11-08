@@ -1,0 +1,108 @@
+name: Exhibit
+description: Verifies that a pull request does what its ticket promised — browser agent, verdict per acceptance criterion, evidence.
+author: Mateusz Bukowski
+branding:
+  icon: check-square
+  color: green
+
+inputs:
+  preview-url:
+    description: "Preview deployment URL of the PR. {pr}, {branch} and {sha} are expanded. Defaults to preview_url in .exhibit.yml."
+    required: false
+  anthropic-api-key:
+    description: Anthropic API key (BYOK). Set this or openai-api-key, matching model.provider in .exhibit.yml.
+    required: false
+  openai-api-key:
+    description: OpenAI API key (BYOK).
+    required: false
+  model-provider:
+    description: "anthropic or openai. Default: model.provider in .exhibit.yml, or whichever key is set."
+    required: false
+  model:
+    description: "Model id, e.g. claude-opus-5-5 or gpt-5. Default: model.name in .exhibit.yml or the provider default."
+    required: false
+  jira-base-url:
+    description: e.g. https://your-company.atlassian.net
+    required: false
+  jira-email:
+    description: Jira account email for the API token.
+    required: false
+  jira-api-token:
+    description: Jira API token.
+    required: false
+  ticket-file:
+    description: Read the ticket from a Markdown file in the repo instead of Jira (demos, repos without Jira).
+    required: false
+  mode:
+    description: "comment (advisory, never fails) or check (fails the status when an acceptance criterion is not met). Defaults to mode in .exhibit.yml."
+    required: false
+  preview-timeout:
+    description: Seconds to wait for the preview deployment to answer.
+    required: false
+    default: "600"
+  debug:
+    description: "true to also save every full model prompt with the evidence (for debugging Exhibit itself)."
+    required: false
+    default: "false"
+  github-token:
+    description: Token used to read the PR and write the comment and status.
+    required: false
+    default: ${{ github.token }}
+
+outputs:
+  verdict:
+    description: pass | fail | needs_review
+    value: ${{ steps.run.outputs.verdict }}
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1  # v7.1.0
+      with:
+        node-version: 22
+
+    - name: Install Exhibit
+      shell: bash
+      working-directory: ${{ github.action_path }}
+      run: |
+        corepack enable
+        pnpm install --frozen-lockfile
+        pnpm --filter @exhibit/core exec playwright install --with-deps chromium
+
+    - name: Verify acceptance criteria
+      id: run
+      shell: bash
+      working-directory: ${{ github.workspace }}
+      env:
+        ANTHROPIC_API_KEY: ${{ inputs.anthropic-api-key }}
+        OPENAI_API_KEY: ${{ inputs.openai-api-key }}
+        JIRA_BASE_URL: ${{ inputs.jira-base-url }}
+        JIRA_EMAIL: ${{ inputs.jira-email }}
+        JIRA_API_TOKEN: ${{ inputs.jira-api-token }}
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+        INPUT_PREVIEW_URL: ${{ inputs.preview-url }}
+        INPUT_TICKET_FILE: ${{ inputs.ticket-file }}
+        INPUT_MODE: ${{ inputs.mode }}
+        INPUT_PREVIEW_TIMEOUT: ${{ inputs.preview-timeout }}
+        INPUT_DEBUG: ${{ inputs.debug }}
+        INPUT_MODEL_PROVIDER: ${{ inputs.model-provider }}
+        INPUT_MODEL: ${{ inputs.model }}
+      run: |
+        args=(ci -C "$GITHUB_WORKSPACE" -o "$RUNNER_TEMP/exhibit-artifacts" --preview-timeout "$INPUT_PREVIEW_TIMEOUT")
+        [ -n "$INPUT_PREVIEW_URL" ] && args+=(--url "$INPUT_PREVIEW_URL")
+        [ -n "$INPUT_TICKET_FILE" ] && args+=(--ticket-file "$INPUT_TICKET_FILE")
+        [ -n "$INPUT_MODE" ] && args+=(--mode "$INPUT_MODE")
+        [ "$INPUT_DEBUG" = "true" ] && args+=(--debug)
+        [ -n "$INPUT_MODEL_PROVIDER" ] && args+=(--provider "$INPUT_MODEL_PROVIDER")
+        [ -n "$INPUT_MODEL" ] && args+=(--model "$INPUT_MODEL")
+        "$GITHUB_ACTION_PATH/node_modules/.bin/tsx" --conditions=development \
+          "$GITHUB_ACTION_PATH/packages/cli/src/index.ts" "${args[@]}"
+
+    - name: Upload evidence
+      if: always()
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7.0.2
+      with:
+        name: exhibit-evidence-pr${{ github.event.pull_request.number }}
+        path: ${{ runner.temp }}/exhibit-artifacts
+        if-no-files-found: ignore
+        retention-days: 14

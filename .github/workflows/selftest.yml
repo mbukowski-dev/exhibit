@@ -1,0 +1,56 @@
+# Exhibit verifies itself: on every PR it starts the demo app (examples/demo-app,
+# which has a deliberate AC3 bug), runs the action from this checkout with a real
+# model against examples/PROJ-123.md, comments on the PR and uploads full
+# diagnostics (events.jsonl, summary.md, prompts/) with the evidence.
+name: Exhibit self-test
+on:
+  pull_request:
+
+permissions:
+  contents: read
+  pull-requests: write
+  statuses: write
+
+concurrency:
+  group: selftest-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  selftest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      HAS_KEY: ${{ secrets.ANTHROPIC_API_KEY != '' || secrets.OPENAI_API_KEY != '' }}
+    steps:
+      - name: Skip without a model key
+        if: env.HAS_KEY != 'true'
+        run: echo "::notice::Add an ANTHROPIC_API_KEY or OPENAI_API_KEY repository secret to run the self-test."
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        if: env.HAS_KEY == 'true'
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1  # v7.1.0
+        if: env.HAS_KEY == 'true'
+        with:
+          node-version: 22
+
+      - name: Start demo app
+        if: env.HAS_KEY == 'true'
+        run: nohup node examples/demo-app/server.mjs > "$RUNNER_TEMP/demo-app.log" 2>&1 &
+
+      - name: Exhibit
+        id: exhibit
+        if: env.HAS_KEY == 'true'
+        uses: ./
+        with:
+          preview-url: http://localhost:4173
+          ticket-file: examples/PROJ-123.md
+          anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
+          openai-api-key: ${{ secrets.OPENAI_API_KEY }}
+          debug: "true"
+
+      - name: Verdict
+        if: env.HAS_KEY == 'true' && always()
+        run: |
+          echo "Exhibit verdict: ${{ steps.exhibit.outputs.verdict }}"
+          echo "Expected for the demo app: fail (AC3 bug)."

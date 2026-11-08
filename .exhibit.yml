@@ -1,0 +1,18 @@
+# Example config — copy to the root of the repo you want to verify.
+# In this repo it also drives the self-test against examples/demo-app.
+tracker: jira
+ticket_pattern: "[A-Z][A-Z0-9]+-\\d+"
+preview_url: "http://localhost:4173"
+model:
+  provider: anthropic          # switches to openai automatically if only OPENAI_API_KEY is set
+  max_cost_per_run_usd: 1.5
+  # effort:                    # reasoning per stage: low | medium | high
+  #   review: medium
+  #   plan: low
+  #   agent: low
+mode: comment
+max_scenarios: 6
+# Facts the browser agent needs that are not in the ticket (no real passwords here).
+agent_notes: |
+  Registered test account: ana@example.com (no password needed for the reset flow).
+  Any other address, e.g. nobody@example.com, is an unknown account.
