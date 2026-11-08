@@ -148,8 +148,8 @@ can read, audit and modify everything that runs with your secrets.
 
 | | |
 |---|---|
-| **Free** | personal, non-commercial and educational use · repositories of open source projects · **one private repository per organization** · evaluation and testing, always |
-| **Commercial license** | an organization using Exhibit on more than one private repository — [get in touch](https://github.com/Lulek77777/exhibit/issues) |
+| **Free** | personal, non-commercial and educational use · repositories of open source projects · **one private repository per organization** (up to 10 contributors) · evaluation and testing, always |
+| **Commercial license** | an organization using Exhibit on more than one private repository, or on a private repository with more than 10 contributors — [get in touch](https://github.com/Lulek77777/exhibit/issues) |
 
 Each version becomes open source under Apache 2.0 four years after it is published. The license text is
 what counts; this table is a summary.

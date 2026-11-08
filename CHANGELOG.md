@@ -3,7 +3,7 @@
 ## 0.2.0 — first public version
 
 - License: Business Source License 1.1 — free for personal use, open source projects and one private
-  repository per organization; each version becomes Apache 2.0 four years after publication.
+  repository per organization (up to 10 contributors); each version becomes Apache 2.0 four years after publication.
 
 ## 0.1.x — private previews
 
