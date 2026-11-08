@@ -17,9 +17,9 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@ai-sdk/anthropic": "^2.0.0",
-    "@ai-sdk/openai": "^2.0.0",
-    "ai": "^5.0.0",
+    "@ai-sdk/anthropic": "^4.0.97",
+    "@ai-sdk/openai": "^4.0.109",
+    "ai": "^7.0.163",
     "playwright": "^1.50.0",
     "yaml": "^2.5.0",
     "zod": "^4.6.7"
