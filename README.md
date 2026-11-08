@@ -79,7 +79,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
-      - uses: mbukowski-dev/exhibit@a4140f7beb9427548c1457c326264774cb2c4e36  # v0.3.0
+      - uses: mbukowski-dev/exhibit@a0974c145829a5ebb9b0cbc363e2e7f7ea8007e8  # v0.3.1
         with:
           preview-url: https://myapp-git-{branch}-acme.vercel.app
           openai-api-key: ${{ secrets.OPENAI_API_KEY }}
