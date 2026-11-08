@@ -14,7 +14,20 @@ Exhibit answers it on every pull request. It reads the ticket and its acceptance
 PR's preview deployment in a real browser, checks each criterion like a tester would, and posts one
 comment with a verdict and proof — video, screenshots and a replayable trace.
 
-> **Early preview (v0.1).** Works end to end on GitHub; tested so far on a demo app. If you'd like to try it
+## Why
+
+Coding agents are starting to write most of the code. Reviewing changes shifts from *"is this line
+right?"* to *"is this what we asked for?"* — and that question is still answered by hand, if at all.
+
+Exhibit's goal is simple: **every change arrives with evidence that it does what was asked.** Acceptance
+criteria stop being text in a ticket and become checks that run on every pull request. The ones that pass
+turn into ordinary tests that stay in your repository. People review intent and evidence instead of
+re-clicking through every change.
+
+Exhibit is not a code-style reviewer (other tools do that well), not a framework you write tests in, and
+not a replacement for the people who approve a merge — it gives them proof to decide on.
+
+> **Early preview (v0.2).** Works end to end on GitHub; tested so far on a demo app. If you'd like to try it
 > on your project, open an issue — early users get hands-on help with the setup.
 
 ## What you get in the pull request
@@ -66,7 +79,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
-      - uses: Lulek77777/exhibit@1001d2b3114af18a218c5fe09fbe81549675e9f6  # v0.2.0
+      - uses: Lulek77777/exhibit@a4140f7beb9427548c1457c326264774cb2c4e36  # v0.3.0
         with:
           preview-url: https://myapp-git-{branch}-acme.vercel.app
           openai-api-key: ${{ secrets.OPENAI_API_KEY }}
@@ -135,8 +148,8 @@ can read, audit and modify everything that runs with your secrets.
 
 | | |
 |---|---|
-| **Free** | personal, non-commercial and educational use · repositories of open source projects · **one private repository per organization** · evaluation and testing, always |
-| **Commercial license** | an organization using Exhibit on more than one private repository — [get in touch](https://github.com/Lulek77777/exhibit/issues) |
+| **Free** | personal, non-commercial and educational use · repositories of open source projects · **one private repository per organization** (up to 10 contributors) · evaluation and testing, always |
+| **Commercial license** | an organization using Exhibit on more than one private repository, or on a private repository with more than 10 contributors — [get in touch](https://github.com/Lulek77777/exhibit/issues) |
 
 Each version becomes open source under Apache 2.0 four years after it is published. The license text is
 what counts; this table is a summary.

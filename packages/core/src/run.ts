@@ -5,6 +5,7 @@ import { chromium } from "playwright";
 import { replayScenario, runScenarios, type ScenarioResult } from "./browser/agent.js";
 import { resolveRoleAuth, type RoleAuth } from "./browser/auth.js";
 import { generateTests, type GeneratedTests } from "./codegen.js";
+import type { AcceptanceCriterion } from "./acceptance.js";
 import type { ExhibitConfig } from "./config.js";
 import type { VerificationContext } from "./context.js";
 import { planVerification, type VerificationPlan } from "./plan.js";
@@ -15,6 +16,8 @@ import { judge, type RunVerdict } from "./verdict.js";
 
 export interface RunReport {
   ticket: { key: string; summary: string; url: string };
+  /** The criteria as verified — after changes from ticket comments. */
+  criteria: AcceptanceCriterion[];
   baseUrl: string;
   verdict: RunVerdict;
   review: Review;
@@ -109,6 +112,7 @@ export async function runVerification(o: RunVerificationOptions): Promise<RunRep
 
   const report: RunReport = {
     ticket: { key: ctx.ticket.key, summary: ctx.ticket.summary, url: ctx.ticket.url },
+    criteria: ctx.criteria,
     baseUrl: o.baseUrl,
     verdict,
     review,

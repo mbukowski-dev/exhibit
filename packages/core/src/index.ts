@@ -25,3 +25,4 @@ export * from "./effort.js";
 export * from "./llm.js";
 export * from "./diff-budget.js";
 export * from "./browser/guard.js";
+export * from "./reconcile.js";

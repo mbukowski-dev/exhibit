@@ -98,7 +98,7 @@ describe("planVerification (E3-1)", () => {
     const meter = new UsageMeter("claude-opus-5-5");
     const plan = await planVerification(ctx, { coverage: [], risks: [] }, model, { meter });
     expect(plan.scenarios).toHaveLength(1);
-    expect(JSON.stringify(model.doGenerateCalls[0]!.prompt)).not.toContain("<diff");
+    expect(JSON.stringify(model.doGenerateCalls[0]!.prompt)).not.toContain("</diff>");
     expect(meter.steps.map((s) => s.step)).toEqual(["plan"]);
   });
 });
