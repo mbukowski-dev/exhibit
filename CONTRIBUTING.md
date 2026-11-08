@@ -3,7 +3,7 @@
 Thanks for your interest in Exhibit!
 
 - **Bug reports, questions and ideas are very welcome** — please open an
-  [issue](https://github.com/Lulek77777/exhibit/issues).
+  [issue](https://github.com/mbukowski-dev/exhibit/issues).
 - **Security problems:** please don't open a public issue; see [SECURITY.md](SECURITY.md).
 - **Code contributions:** Exhibit is a source-available project under the
   [Business Source License 1.1](LICENSE), and for now we are **not accepting pull requests with code

@@ -32,7 +32,7 @@ not a replacement for the people who approve a merge — it gives them proof to 
 
 ## What you get in the pull request
 
-A real comment from this repository's [self-test](https://github.com/Lulek77777/exhibit/pull/1), shortened:
+A real comment from this repository's [self-test](https://github.com/mbukowski-dev/exhibit/pull/1), shortened:
 
 > ### Exhibit · PROJ-123 Password reset via email
 > **❌ Acceptance criteria not met** — 1/4 acceptance criteria verified, 1 partly
@@ -79,7 +79,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
-      - uses: Lulek77777/exhibit@a4140f7beb9427548c1457c326264774cb2c4e36  # v0.3.0
+      - uses: mbukowski-dev/exhibit@a4140f7beb9427548c1457c326264774cb2c4e36  # v0.3.0
         with:
           preview-url: https://myapp-git-{branch}-acme.vercel.app
           openai-api-key: ${{ secrets.OPENAI_API_KEY }}
@@ -119,7 +119,7 @@ allowed_origins: []                # other sites the browser may open, e.g. an S
 Requires Node.js 22+ and pnpm.
 
 ```bash
-git clone https://github.com/Lulek77777/exhibit && cd exhibit
+git clone https://github.com/mbukowski-dev/exhibit && cd exhibit
 pnpm install && pnpm --filter @exhibit/core exec playwright install chromium
 cp .env.example .env                       # add OPENAI_API_KEY or ANTHROPIC_API_KEY
 
@@ -149,7 +149,7 @@ can read, audit and modify everything that runs with your secrets.
 | | |
 |---|---|
 | **Free** | personal, non-commercial and educational use · repositories of open source projects · **one private repository per organization** (up to 10 contributors) · evaluation and testing, always |
-| **Commercial license** | an organization using Exhibit on more than one private repository, or on a private repository with more than 10 contributors — [get in touch](https://github.com/Lulek77777/exhibit/issues) |
+| **Commercial license** | an organization using Exhibit on more than one private repository, or on a private repository with more than 10 contributors — [get in touch](https://github.com/mbukowski-dev/exhibit/issues) |
 
 Each version becomes open source under Apache 2.0 four years after it is published. The license text is
 what counts; this table is a summary.
