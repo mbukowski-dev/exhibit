@@ -14,7 +14,20 @@ Exhibit answers it on every pull request. It reads the ticket and its acceptance
 PR's preview deployment in a real browser, checks each criterion like a tester would, and posts one
 comment with a verdict and proof — video, screenshots and a replayable trace.
 
-> **Early preview (v0.1).** Works end to end on GitHub; tested so far on a demo app. If you'd like to try it
+## Why
+
+Coding agents are starting to write most of the code. Reviewing changes shifts from *"is this line
+right?"* to *"is this what we asked for?"* — and that question is still answered by hand, if at all.
+
+Exhibit's goal is simple: **every change arrives with evidence that it does what was asked.** Acceptance
+criteria stop being text in a ticket and become checks that run on every pull request. The ones that pass
+turn into ordinary tests that stay in your repository. People review intent and evidence instead of
+re-clicking through every change.
+
+Exhibit is not a code-style reviewer (other tools do that well), not a framework you write tests in, and
+not a replacement for the people who approve a merge — it gives them proof to decide on.
+
+> **Early preview (v0.2).** Works end to end on GitHub; tested so far on a demo app. If you'd like to try it
 > on your project, open an issue — early users get hands-on help with the setup.
 
 ## What you get in the pull request
