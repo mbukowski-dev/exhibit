@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.1
+
+- The GitHub account moved to `mbukowski-dev`: repository links, the action reference and the license contact
+  address now point to https://github.com/mbukowski-dev/exhibit.
+
 ## 0.3.0
 
 - Acceptance criteria are reconciled with later ticket comments (each change quotes the comment and is verified).
