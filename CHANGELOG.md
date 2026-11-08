@@ -1,6 +1,11 @@
 # Changelog
 
-## 0.2.0 — first public version
+## Unreleased
+
+- Acceptance criteria are reconciled with later ticket comments (each change quotes the comment and is verified).
+- The pull request title and description are given to the model as the developer's claim; ticket, PR and diff text are treated as data, never as instructions.
+
+## 0.2.1 — first public version
 
 - License: Business Source License 1.1 — free for personal use, open source projects and one private
   repository per organization (up to 10 contributors); each version becomes Apache 2.0 four years after publication.
