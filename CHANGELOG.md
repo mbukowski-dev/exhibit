@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.3.2
 
 - Nested list items in an acceptance criteria section are folded into their parent criterion instead of
   becoming separate criteria.
