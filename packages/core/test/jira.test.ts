@@ -30,7 +30,7 @@ const ISSUES: Record<string, object> = {
     key: "PROJ-123",
     names: { summary: "Summary", description: "Description", customfield_10050: "Story points", comment: "Comment" },
     fields: {
-      summary: "Password reset via email",
+      summary: "Password reset via email\n", // pasted titles can keep a trailing newline; the client trims it
       issuetype: { name: "Story" },
       status: { name: "In Review" },
       customfield_10050: 3,
