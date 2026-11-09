@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.3.3
 
 - A failed criterion needs evidence about the app: a "fail" seen on an error page (HTTP 4xx/5xx) at a URL the
   browser agent typed in itself, rather than found in the app or named by the scenario, is reported as not
