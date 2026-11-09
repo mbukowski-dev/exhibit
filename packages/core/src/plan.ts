@@ -42,6 +42,10 @@ Rules:
   notTestableInBrowser for the invisible part. Never mark a scenario notTestableInBrowser if any of
   its expected results can be seen on the page.
 - If an AC cannot be checked in a browser at all, still add a scenario and fill notTestableInBrowser.
+- A scenario whose steps need something a tester in the browser cannot produce — a link or code from an
+  e-mail, a token or ID from another system, or waiting for time to pass (e.g. a link that expires after
+  30 minutes) — is notTestableInBrowser, unless the ticket says how to get it inside the app.
+  Never tell the tester to guess or construct such URLs.
 - Do not invent features that are not in the ticket or the diff.
 Write in the language of the ticket.
 ${UNTRUSTED_DATA_RULE}`;
