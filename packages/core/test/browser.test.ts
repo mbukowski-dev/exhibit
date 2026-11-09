@@ -7,7 +7,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { MockLanguageModelV2 } from "ai/test";
 // @ts-expect-error — plain JS demo app
 import { createApp } from "../../../examples/demo-app/server.mjs";
-import { runScenario, runScenarios } from "../src/browser/agent.js";
+import { guessedErrorPage, mentionedPaths, runScenario, runScenarios } from "../src/browser/agent.js";
 import { Secrets } from "../src/browser/secrets.js";
 import { expandPreviewUrl, waitForUrl } from "../src/browser/ready.js";
 import { judge } from "../src/verdict.js";
@@ -272,4 +272,64 @@ describe("lessons from self-test run 2", () => {
     expect(r.verdict).toBe("blocked");
     expect(r.reason).toMatch(/stuck repeating "click button "Nope""/);
   }, 30_000);
+});
+
+describe("a fail needs evidence about the app, not about a guessed URL", () => {
+  it("turns a fail on a 404 at a URL the agent typed in into 'not verified' (seen in a real run)", async () => {
+    const model = scripted([
+      { action: "goto", value: "/reset?token=expired" },
+      { action: "assert", value: "Not found" },
+      { action: "done", verdict: "fail", reason: "Shows 404 instead of an 'expired link' message" },
+    ]);
+    const r = await runScenario(
+      scenario("S5", ["AC4"], { startPath: "/", steps: ["Open a password reset link older than 30 minutes"], expected: ["An 'expired link' error"] }),
+      { baseUrl, model, artifactsDir: dir },
+    );
+    expect(r.verdict).toBe("blocked");
+    expect(r.reason).toMatch(/HTTP 404\) at \/reset, a URL the agent typed in/);
+    expect(r.reason).toContain("Agent's claim: Shows 404");
+  }, 30_000);
+
+  it("keeps the fail when the scenario itself names the page that is missing", async () => {
+    const model = scripted([
+      { action: "goto", value: "/reset" },
+      { action: "assert", value: "Not found" },
+      { action: "done", verdict: "fail", reason: "The /reset page does not exist" },
+    ]);
+    const r = await runScenario(
+      scenario("S6", ["AC4"], { startPath: "/", steps: ["Navigate to /reset"], expected: ["A form to choose a new password"] }),
+      { baseUrl, model, artifactsDir: dir },
+    );
+    expect(r.verdict).toBe("fail");
+  }, 30_000);
+
+  it("keeps a fail seen on a real page of the app", async () => {
+    const model = scripted([
+      { action: "click", role: "link", name: "Forgot password?" },
+      { action: "fill", role: "textbox", name: "Email", value: "nobody@example.com" },
+      { action: "click", role: "button", name: "Send reset link" },
+      { action: "assert", value: "No account found for this email" },
+      { action: "done", verdict: "fail", reason: "Reveals that the account does not exist" },
+    ]);
+    const r = await runScenario(scenario("S3", ["AC3"]), { baseUrl, model, artifactsDir: dir });
+    expect(r.verdict).toBe("fail");
+  }, 30_000);
+});
+
+describe("guessedErrorPage / mentionedPaths", () => {
+  const known = new Set(["/", "/login", "/forgot/"]);
+  it("flags only an error page reached by a goto to an unknown path", () => {
+    expect(guessedErrorPage({ status: 404, path: "/reset", byGoto: true }, known)).toMatch(/HTTP 404/);
+    expect(guessedErrorPage({ status: 500, path: "/admin", byGoto: true }, known)).toMatch(/HTTP 500/);
+    expect(guessedErrorPage({ status: 404, path: "/forgot", byGoto: true }, known)).toBeUndefined(); // known (trailing slash)
+    expect(guessedErrorPage({ status: 404, path: "/reset", byGoto: false }, known)).toBeUndefined(); // reached by a click
+    expect(guessedErrorPage({ status: 200, path: "/reset", byGoto: true }, known)).toBeUndefined();
+    expect(guessedErrorPage(undefined, known)).toBeUndefined();
+  });
+  it("finds paths written in scenario text and notes", () => {
+    expect(mentionedPaths(["Navigate to /login", 'Open "/settings/profile?tab=1"', "see https://x.test/abs", "no path here"])).toEqual([
+      "/login",
+      "/settings/profile",
+    ]);
+  });
 });

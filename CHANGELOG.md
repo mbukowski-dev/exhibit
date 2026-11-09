@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- A failed criterion needs evidence about the app: a "fail" seen on an error page (HTTP 4xx/5xx) at a URL the
+  browser agent typed in itself, rather than found in the app or named by the scenario, is reported as not
+  verified instead. The agent and the planner are also told not to guess URLs or tokens, and to treat steps
+  that need an e-mail, a token or time passing as not testable in the browser.
+
 ## 0.3.2
 
 - Nested list items in an acceptance criteria section are folded into their parent criterion instead of

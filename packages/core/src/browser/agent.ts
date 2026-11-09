@@ -72,6 +72,10 @@ Return exactly one next action.
 - Finish with "done": verdict pass when every expected result was observed, fail when the app clearly
   behaves differently than expected (this is a bug report — be specific), blocked when you cannot reach
   the point of checking (missing data, login wall, broken page unrelated to the scenario).
+- Only "goto" paths you saw as links in the app, or that the scenario or the test data notes name.
+  Never guess URLs, tokens or IDs. If a step needs something the browser cannot give you (a link or
+  code from an e-mail, a token, data from another system, time passing), finish with blocked and say
+  what was missing — a "not found" page at a guessed URL proves nothing about the app.
 - Be economical: most scenarios need fewer than 12 steps.
 - <exhibit_notice> blocks come from Exhibit's supervisor. Follow them before anything else.`;
 
@@ -145,6 +149,44 @@ async function nextAction(prompt: string, opts: RunScenarioOptions, scenarioId: 
   }
 }
 
+/** Same-origin paths the page links to (links and form targets). */
+async function linkedPaths(page: Page, origin: string): Promise<string[]> {
+  const raw = await page
+    .$$eval("a[href], form[action], area[href]", (els) => els.map((e) => e.getAttribute("href") ?? e.getAttribute("action") ?? ""))
+    .catch(() => [] as string[]);
+  const out: string[] = [];
+  for (const r of raw) {
+    try {
+      const u = new URL(r, page.url());
+      if (u.origin === origin) out.push(u.pathname);
+    } catch {
+      /* not a URL */
+    }
+  }
+  return out;
+}
+
+/** Paths written in the scenario or the notes, e.g. "Navigate to /login". */
+export function mentionedPaths(texts: string[]): string[] {
+  return texts.flatMap((t) => [...t.matchAll(/(?:^|[\s"'`(=])(\/[\w\-./~%]*)/g)].map((m) => m[1]!.split(/[?#]/)[0]!));
+}
+
+/**
+ * A "fail" is a bug report, so it needs evidence about the app. An error page (HTTP 4xx/5xx) at a path
+ * the agent typed in itself — not linked from the app, not named by the scenario or the notes — is
+ * evidence about the guess, not the app (seen in a real run: an expired reset link "tested" by opening
+ * /reset?token=expired → 404 → reported as a failed criterion).
+ */
+export function guessedErrorPage(
+  lastNav: { status: number; path: string; byGoto: boolean } | undefined,
+  known: Set<string>,
+): string | undefined {
+  if (!lastNav || !lastNav.byGoto || lastNav.status < 400) return undefined;
+  const norm = (p: string) => p.replace(/\/+$/, "") || "/";
+  if ([...known].some((k) => norm(k) === norm(lastNav.path))) return undefined;
+  return `The failure was seen on an error page (HTTP ${lastNav.status}) at ${lastNav.path}, a URL the agent typed in rather than found in the app, so it is not evidence about the app. Not verified.`;
+}
+
 /** E4-1..4: runs one scenario with an LLM choosing actions on the accessibility tree. */
 export async function runScenario(scenario: Scenario, opts: RunScenarioOptions): Promise<ScenarioResult> {
   const started = Date.now();
@@ -169,6 +211,11 @@ export async function runScenario(scenario: Scenario, opts: RunScenarioOptions):
   let pending: string[] = [];
   const loopsNudged = new Set<string>();
   let passRejections = 0;
+  // Where the agent may navigate on its own evidence, and how the current page was reached.
+  const origin = new URL(opts.baseUrl).origin;
+  const known = new Set<string>([scenario.startPath || "/", ...mentionedPaths([...scenario.steps, ...scenario.expected, opts.notes ?? ""])]);
+  let lastNav: { status: number; path: string; byGoto: boolean } | undefined;
+  let gotoInFlight = false;
   const nudge = (step: number, x: Nudge) => {
     nudges.push({ ...x, step });
     pending.push(x.message);
@@ -191,6 +238,9 @@ export async function runScenario(scenario: Scenario, opts: RunScenarioOptions):
     });
     page.on("response", (r) => {
       if (r.status() >= 500) failedRequests.push(`${r.status()} ${r.request().method()} ${r.url()}`);
+      if (r.request().isNavigationRequest() && r.frame() === page.mainFrame()) {
+        lastNav = { status: r.status(), path: new URL(r.url()).pathname, byGoto: gotoInFlight };
+      }
     });
     page.on("requestfailed", (r) => failedRequests.push(`failed ${r.method()} ${r.url()}: ${r.failure()?.errorText ?? ""}`));
 
@@ -203,6 +253,7 @@ export async function runScenario(scenario: Scenario, opts: RunScenarioOptions):
     }
     guard.activate();
     await page.goto(scenario.startPath || "/", { waitUntil: "domcontentloaded" });
+    for (const p of await linkedPaths(page, origin)) known.add(p);
 
     for (let n = 1; n <= maxSteps; n++) {
       opts.meter?.assertBudget(`${scenario.id} step ${n}`);
@@ -231,11 +282,20 @@ export async function runScenario(scenario: Scenario, opts: RunScenarioOptions):
         }
         verdict = action.verdict ?? "blocked";
         reason = action.reason ?? action.thought;
+        const guessed = verdict === "fail" ? guessedErrorPage(lastNav, known) : undefined;
+        if (guessed) {
+          verdict = "blocked";
+          reason = `${guessed} Agent's claim: ${reason}`;
+          opts.log?.log({ type: "warning", message: `${scenario.id}: fail on a guessed URL treated as not verified` });
+        }
         steps.push({ n, action, ok: true, url: page.url() });
         break;
       }
       const urlBefore = page.url();
+      gotoInFlight = action.action === "goto";
       let res = await executeAction(page, action, { baseUrl: opts.baseUrl, secrets, timeoutMs: opts.actionTimeoutMs, canTypeSecretsAt });
+      gotoInFlight = false;
+      for (const p of await linkedPaths(page, origin)) known.add(p);
       const blocked = guard.takeBlocked();
       if (blocked.length) {
         // The aborted navigation leaves Chromium on an error page; put the agent back.
