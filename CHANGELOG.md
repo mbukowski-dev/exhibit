@@ -5,6 +5,8 @@
 - Nested list items in an acceptance criteria section are folded into their parent criterion instead of
   becoming separate criteria.
 - Jira ticket titles are trimmed, so a title pasted with a trailing newline no longer breaks the output.
+- Clearer Jira errors: a wrong e-mail or API token is reported as such (Jira Cloud answers it with
+  "not found"), and a wrong or unreachable `JIRA_BASE_URL` or a malformed ticket key gets its own message.
 
 ## 0.3.1
 

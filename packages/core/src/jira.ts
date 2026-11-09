@@ -31,6 +31,11 @@ export function jiraCredentialsFromEnv(
   if (missing.length) {
     throw new Error(`Missing Jira credentials: ${missing.join(", ")}`);
   }
+  if (!/^https?:\/\//i.test(env.JIRA_BASE_URL!)) {
+    throw new Error(
+      `JIRA_BASE_URL must start with https:// (got "${env.JIRA_BASE_URL}"), e.g. https://your-company.atlassian.net`,
+    );
+  }
   return {
     baseUrl: env.JIRA_BASE_URL!.replace(/\/+$/, ""),
     email: env.JIRA_EMAIL!,
@@ -104,6 +109,20 @@ function renderItem(li: AdfNode, indent: string): string {
 
 // ---------- API ----------
 
+/** serverInfo answers without login on every Jira Cloud site, so a 404 there means a wrong address. */
+async function isJiraSite(baseUrl: string, fetchImpl: typeof fetch): Promise<boolean> {
+  try {
+    return (await fetchImpl(`${baseUrl}/rest/api/3/serverInfo`, { headers: { Accept: "application/json" } })).ok;
+  } catch {
+    return false;
+  }
+}
+
+function networkReason(e: unknown): string {
+  const cause = (e as { cause?: { code?: string; message?: string } })?.cause;
+  return cause?.code ?? cause?.message ?? (e instanceof Error ? e.message : String(e));
+}
+
 export async function fetchJiraTicket(
   key: string,
   creds: JiraCredentials,
@@ -112,15 +131,32 @@ export async function fetchJiraTicket(
   const auth = Buffer.from(`${creds.email}:${creds.apiToken}`).toString("base64");
   const headers = { Authorization: `Basic ${auth}`, Accept: "application/json" };
 
-  const res = await fetchImpl(
-    `${creds.baseUrl}/rest/api/3/issue/${encodeURIComponent(key)}?expand=names&fields=*all`,
-    { headers },
-  );
-  if (res.status === 404) throw new Error(`Jira ticket ${key} not found (or no access)`);
-  if (res.status === 401 || res.status === 403) {
-    throw new Error(`Jira rejected the credentials (${res.status}). Check JIRA_EMAIL / JIRA_API_TOKEN.`);
+  let res: Response;
+  try {
+    res = await fetchImpl(
+      `${creds.baseUrl}/rest/api/3/issue/${encodeURIComponent(key)}?expand=names&fields=*all`,
+      { headers },
+    );
+  } catch (e) {
+    throw new Error(`Could not reach Jira at ${creds.baseUrl} (${networkReason(e)}). Check JIRA_BASE_URL and your connection.`);
   }
-  if (!res.ok) throw new Error(`Jira API error ${res.status}: ${await res.text()}`);
+
+  // Jira Cloud answers a wrong e-mail or token on an issue URL with 404, not 401, so a bad token
+  // would look like a missing ticket. This header is how Jira marks a failed login.
+  const loginFailed = /AUTHENTICAT\w*_(FAILED|DENIED)/i.test(res.headers.get("x-seraph-loginreason") ?? "");
+  if (loginFailed || res.status === 401 || res.status === 403) {
+    throw new Error(
+      "Jira rejected the credentials. Check JIRA_EMAIL and JIRA_API_TOKEN (the token may have expired or been revoked).",
+    );
+  }
+  if (res.status === 404) {
+    if (!(await isJiraSite(creds.baseUrl, fetchImpl))) {
+      throw new Error(`No Jira site at ${creds.baseUrl}. Check JIRA_BASE_URL, e.g. https://your-company.atlassian.net`);
+    }
+    const hint = /^[A-Za-z][A-Za-z0-9]+-\d+$/.test(key) ? "" : " Ticket keys look like PROJ-123.";
+    throw new Error(`Jira ticket ${key} not found, or this account cannot see it.${hint}`);
+  }
+  if (!res.ok) throw new Error(`Jira API error ${res.status}: ${(await res.text()).slice(0, 300)}`);
 
   const issue = (await res.json()) as {
     key: string;
