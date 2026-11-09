@@ -86,3 +86,6 @@ credentials** (videos and screenshots are still kept; password fields stay maske
 Videos, traces, screenshots and diagnostics (`events.jsonl`, `summary.md`, and full prompts with
 `debug: true`) are uploaded as workflow artifacts. In **public repositories they are visible to anyone**
 who can see the workflow run. Keep `debug` off and use test data only.
+
+The pull request comment quotes the ticket's title and acceptance criteria. In a public repository it is
+public too, so don't run Exhibit there on tickets whose content must stay private.

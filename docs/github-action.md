@@ -11,6 +11,11 @@ permissions:
   pull-requests: write   # the report comment
   statuses: write        # the "Exhibit" status next to the checks
 
+# A new push to the PR cancels the run still going for the previous one, so you pay for one run, not each push.
+concurrency:
+  group: exhibit-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
 jobs:
   exhibit:
     runs-on: ubuntu-latest

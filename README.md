@@ -27,7 +27,7 @@ re-clicking through every change.
 Exhibit is not a code-style reviewer (other tools do that well), not a framework you write tests in, and
 not a replacement for the people who approve a merge — it gives them proof to decide on.
 
-> **Early preview (v0.2).** Works end to end on GitHub; tested so far on a demo app. If you'd like to try it
+> **Early preview (v0.3).** Works end to end on GitHub; tested so far on a demo app and a real Jira Cloud site. If you'd like to try it
 > on your project, open an issue — early users get hands-on help with the setup.
 
 ## What you get in the pull request
@@ -74,9 +74,11 @@ Add `.github/workflows/exhibit.yml` — full example and options in **[docs/gith
 ```yaml
 on: pull_request
 permissions: { contents: read, pull-requests: write, statuses: write }
+concurrency: { group: "exhibit-${{ github.event.pull_request.number }}", cancel-in-progress: true }  # one paid run per PR, not per push
 jobs:
   exhibit:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
       - uses: mbukowski-dev/exhibit@a0974c145829a5ebb9b0cbc363e2e7f7ea8007e8  # v0.3.1
