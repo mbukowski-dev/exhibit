@@ -5,7 +5,7 @@ import { resolve } from "node:path";
 import type { AddressInfo } from "node:net";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { MockLanguageModelV2 } from "ai/test";
-import { fetchJiraTicket } from "../src/jira.js";
+import { fetchJiraTicket, jiraCredentialsFromEnv } from "../src/jira.js";
 import { extractAcceptanceCriteria } from "../src/acceptance.js";
 import { applyChanges } from "../src/reconcile.js";
 import { buildContext } from "../src/context.js";
@@ -78,10 +78,15 @@ let baseUrl: string;
 
 beforeAll(async () => {
   server = createServer((req, res) => {
+    if (req.url === "/rest/api/3/serverInfo") {
+      res.writeHead(200, { "content-type": "application/json" });
+      return res.end(JSON.stringify({ deploymentType: "Cloud" }));
+    }
     const expected = "Basic " + Buffer.from(`${EMAIL}:${TOKEN}`).toString("base64");
     if (req.headers.authorization !== expected) {
-      res.writeHead(401, { "content-type": "application/json" });
-      return res.end(JSON.stringify({ errorMessages: ["Client must be authenticated"] }));
+      // Like Jira Cloud: a failed login on an issue URL is a 404, marked only by this header.
+      res.writeHead(404, { "content-type": "application/json", "x-seraph-loginreason": "AUTHENTICATED_FAILED" });
+      return res.end(JSON.stringify({ errorMessages: ["Issue does not exist or you do not have permission to see it."] }));
     }
     const m = req.url?.match(/^\/rest\/api\/3\/issue\/([A-Z0-9-]+)\?expand=names&fields=\*all$/);
     const issue = m && ISSUES[decodeURIComponent(m[1]!)];
@@ -118,9 +123,28 @@ describe("Jira client against a Jira-like API", () => {
     ]);
   });
 
-  it("explains a wrong token and a missing ticket", async () => {
-    await expect(fetchJiraTicket("PROJ-123", { ...creds(), apiToken: "wrong" })).rejects.toThrow(/rejected the credentials \(401\)/);
-    await expect(fetchJiraTicket("PROJ-999", creds())).rejects.toThrow(/PROJ-999 not found/);
+  it("explains a wrong token or e-mail, without echoing the token", async () => {
+    const wrongToken = fetchJiraTicket("PROJ-123", { ...creds(), apiToken: "SECRET-wrong-token" });
+    await expect(wrongToken).rejects.toThrow(/rejected the credentials.*JIRA_API_TOKEN/);
+    await expect(wrongToken).rejects.not.toThrow(/SECRET-wrong-token/);
+    await expect(fetchJiraTicket("PROJ-123", { ...creds(), email: "nobody@acme.test" })).rejects.toThrow(/rejected the credentials/);
+  });
+
+  it("explains a missing ticket and a malformed key", async () => {
+    await expect(fetchJiraTicket("PROJ-999", creds())).rejects.toThrow(/PROJ-999 not found, or this account cannot see it\.$/);
+    await expect(fetchJiraTicket("proj999", creds())).rejects.toThrow(/look like PROJ-123/);
+  });
+
+  it("explains a wrong site address and an unreachable host", async () => {
+    const notJira = (async () => new Response("Not found", { status: 404 })) as typeof fetch;
+    await expect(fetchJiraTicket("PROJ-1", creds(), notJira)).rejects.toThrow(/No Jira site at .*Check JIRA_BASE_URL/);
+    const offline = (async () => {
+      throw new TypeError("fetch failed", { cause: { code: "ENOTFOUND" } });
+    }) as typeof fetch;
+    await expect(fetchJiraTicket("PROJ-1", creds(), offline)).rejects.toThrow(/Could not reach Jira .*ENOTFOUND/);
+    expect(() =>
+      jiraCredentialsFromEnv({ JIRA_BASE_URL: "acme.atlassian.net", JIRA_EMAIL: EMAIL, JIRA_API_TOKEN: TOKEN }),
+    ).toThrow(/must start with https:\/\//);
   });
 
   it("works end to end through the CLI (exhibit context, no AI)", async () => {
