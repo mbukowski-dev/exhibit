@@ -21,14 +21,29 @@ function number(items: string[], source: AcceptanceCriterion["source"]): Accepta
   return items.map((text, i) => ({ id: `AC${i + 1}`, text, source }));
 }
 
-/** Pulls list items out of a block of text (stops at the next heading). */
+/** Width of the leading whitespace; a tab counts as one nesting level (2 spaces, as adfToText indents). */
+const indentOf = (line: string) => line.match(/^\s*/)![0].replace(/\t/g, "  ").length;
+
+/**
+ * Pulls list items out of a block of text (stops at the next heading).
+ * Nested items are details of their parent, not separate criteria, so they are
+ * appended to it: "Columns: a, b" + "  - amounts use a decimal comma" is one AC.
+ */
 function listItems(lines: string[]): string[] {
   const items: string[] = [];
+  let topIndent = -1;
   for (const line of lines) {
     if (ANY_HEADING.test(line) && items.length) break;
     const m = line.match(LIST_ITEM);
-    if (m?.[1]) items.push(m[1].replace(/^\[[ xX]?\]\s*/, "").trim());
-    else if (line.trim() && items.length && /^\s{2,}\S/.test(line)) {
+    if (m?.[1]) {
+      const text = m[1].replace(/^\[[ xX]?\]\s*/, "").trim();
+      const indent = indentOf(line);
+      if (topIndent < 0) topIndent = indent;
+      if (indent > topIndent && items.length) {
+        const parent = items[items.length - 1]!;
+        items[items.length - 1] = parent + (/[:;,]$/.test(parent) ? " " : "; ") + text;
+      } else items.push(text);
+    } else if (line.trim() && items.length && /^\s{2,}\S/.test(line)) {
       items[items.length - 1] += " " + line.trim(); // wrapped continuation
     }
   }

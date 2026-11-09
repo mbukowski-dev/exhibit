@@ -57,6 +57,26 @@ describe("extractAcceptanceCriteria (E1-3)", () => {
     const ac = extractAcceptanceCriteria(ticket("Kryteria akceptacji:\n1. Przycisk jest widoczny\n2) Klik zapisuje formularz"));
     expect(ac.map((a) => a.text)).toEqual(["Przycisk jest widoczny", "Klik zapisuje formularz"]);
   });
+  it("folds nested items into their parent criterion", () => {
+    const ac = extractAcceptanceCriteria(
+      ticket(
+        "## Kryteria akceptacji\n" +
+          "- Przycisk jest widoczny\n" +
+          "- Plik zawiera kolumny: numer, data\n" +
+          "  - kwoty z przecinkiem dziesiętnym\n" +
+          "\t- data jako RRRR-MM-DD\n" +
+          "- Lista:\n" +
+          "  - pierwszy punkt\n" +
+          "- Pusty miesiąc pokazuje komunikat",
+      ),
+    );
+    expect(ac.map((a) => a.text)).toEqual([
+      "Przycisk jest widoczny",
+      "Plik zawiera kolumny: numer, data; kwoty z przecinkiem dziesiętnym; data jako RRRR-MM-DD",
+      "Lista: pierwszy punkt",
+      "Pusty miesiąc pokazuje komunikat",
+    ]);
+  });
   it("prefers a dedicated custom field", () => {
     const ac = extractAcceptanceCriteria(ticket("## Acceptance Criteria\n- from description", "- from field"));
     expect(ac).toEqual([{ id: "AC1", text: "from field", source: "field" }]);

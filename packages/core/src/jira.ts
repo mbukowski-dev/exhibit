@@ -147,7 +147,7 @@ export async function fetchJiraTicket(
   return {
     key: issue.key,
     url: `${creds.baseUrl}/browse/${issue.key}`,
-    summary: f.summary ?? "",
+    summary: (f.summary ?? "").trim(), // a pasted title can keep a trailing newline
     type: f.issuetype?.name ?? "",
     status: f.status?.name ?? "",
     description: adfToText(f.description),

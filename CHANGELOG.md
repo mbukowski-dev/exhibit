@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Nested list items in an acceptance criteria section are folded into their parent criterion instead of
+  becoming separate criteria.
+- Jira ticket titles are trimmed, so a title pasted with a trailing newline no longer breaks the output.
+
 ## 0.3.1
 
 - The GitHub account moved to `mbukowski-dev`: repository links, the action reference and the license contact
