@@ -25,16 +25,31 @@ export const signature = (s: StepRecord) => {
 
 /**
  * E11-1: a "pass" is only accepted when the page was verified with a
- * successful assert AFTER the last interaction. Returns the reason to reject,
- * or undefined when the pass is backed by evidence.
+ * successful assert AFTER the last interaction — and (E12-4) when every
+ * expected result has a successful assert that names it ("expects").
+ * Returns the reason to reject, or undefined when the pass is backed by evidence.
  */
 export function checkPassEvidence(steps: StepRecord[], expected: string[]): Nudge | undefined {
   let lastAssert = -1;
   let lastInteraction = -1;
+  /** Expected results (1-based) that have a successful assert of their own. */
+  const covered = new Set<number>();
+  /** True once an "assert" succeeded on the page as it is now, i.e. since the last interaction. */
+  let anchored = false;
   steps.forEach((s, i) => {
     if (!s.ok) return;
-    if (s.action.action === "assert") lastAssert = i;
-    else if (INTERACTIONS.has(s.action.action)) lastInteraction = i;
+    const a = s.action;
+    if (a.action === "assert") {
+      lastAssert = i;
+      anchored = true;
+      if (a.expects) covered.add(a.expects);
+    } else if (a.action === "assert_absent") {
+      // Right after a click nothing has rendered yet, so "it is not there" would be trivially true.
+      if (anchored && a.expects) covered.add(a.expects);
+    } else if (INTERACTIONS.has(a.action)) {
+      lastInteraction = i;
+      anchored = false;
+    }
   });
   const exp = expected.map((e) => `- ${e}`).join("\n");
   if (lastAssert < 0) {
@@ -49,7 +64,20 @@ export function checkPassEvidence(steps: StepRecord[], expected: string[]): Nudg
       message: `You reported "pass", but the page was not verified after your last action (${describe(steps[lastInteraction]!)}). Use "assert" to check the expected results on the current page, then finish:\n${exp}`,
     };
   }
-  return undefined;
+  // E12-4: with several expected results, one assert of anything is not enough —
+  // each result needs its own. A single expected result stays simple.
+  if (expected.length < 2) return undefined;
+  const missing = expected.map((e, i) => ({ n: i + 1, e })).filter((x) => !covered.has(x.n));
+  if (!missing.length) return undefined;
+  return {
+    kind: "unverified_pass",
+    message:
+      `You reported "pass", but ${missing.length === 1 ? "this expected result has" : "these expected results have"} no successful assert of ${missing.length === 1 ? "its" : "their"} own:\n` +
+      missing.map((x) => `${x.n}. ${x.e}`).join("\n") +
+      `\nCheck each one with "assert" (or "assert_absent" when something must NOT be shown) and set "expects" to its number. ` +
+      `"assert_absent" only counts after a successful "assert" on the same page, so we know the page has finished loading. ` +
+      `If a result is not true, finish with fail; if it cannot be checked, finish with blocked.`,
+  };
 }
 
 /**

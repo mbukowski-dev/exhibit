@@ -14,7 +14,7 @@ import { PRICES } from "./usage.js";
 export type RunEvent =
   | { type: "stage"; stage: string }
   | { type: "llm_call"; label: string; durationMs: number; inputTokens: number; outputTokens: number; output: string; error?: string; promptFile?: string }
-  | { type: "action"; scenarioId: string; n: number; action: string; target?: string; value?: string; thought?: string; ok: boolean; error?: string; url: string }
+  | { type: "action"; scenarioId: string; n: number; action: string; target?: string; value?: string; thought?: string; ok: boolean; error?: string; url: string; dialogs?: string }
   | { type: "nudge"; scenarioId: string; n: number; kind: string; message: string }
   | { type: "scenario_end"; scenarioId: string; title: string; verdict: string; reason: string; steps: number; durationMs: number; replay?: string }
   | { type: "warning" | "error"; message: string };
@@ -53,7 +53,7 @@ export class RunLog {
     const echo = this.opts.echo;
     if (!echo) return;
     if (e.type === "stage") echo(`▸ ${e.stage}`);
-    if (e.type === "action") echo(`    ${e.scenarioId}#${e.n} ${e.action}${e.target ? ` ${e.target}` : ""}${e.value ? ` = ${e.value}` : ""} → ${e.ok ? "ok" : `FAILED: ${e.error}`}${e.thought ? `   💭 ${e.thought}` : ""}`);
+    if (e.type === "action") echo(`    ${e.scenarioId}#${e.n} ${e.action}${e.target ? ` ${e.target}` : ""}${e.value ? ` = ${e.value}` : ""} → ${e.ok ? "ok" : `FAILED: ${e.error}`}${e.dialogs ? ` [${e.dialogs}]` : ""}${e.thought ? `   💭 ${e.thought}` : ""}`);
     if (e.type === "nudge") echo(`    🔔 ${e.scenarioId}#${e.n} ${e.kind}: ${e.message.split("\n")[0]}`);
     if (e.type === "llm_call" && e.error) echo(`    ⚠️ model call ${e.label} failed: ${e.error}`);
     if (e.type === "warning" || e.type === "error") echo(`${e.type === "error" ? "✖" : "⚠️"} ${e.message}`);

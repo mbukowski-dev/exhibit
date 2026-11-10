@@ -8,7 +8,7 @@ import type { Secrets } from "./secrets.js";
  */
 export const AgentActionSchema = z.object({
   thought: z.string().describe("One sentence: what you see and why this action"),
-  action: z.enum(["click", "fill", "select", "check", "press", "goto", "wait", "assert", "done"]),
+  action: z.enum(["click", "fill", "select", "check", "press", "goto", "wait", "assert", "assert_absent", "done"]),
   role: z
     .string()
     .optional()
@@ -17,7 +17,15 @@ export const AgentActionSchema = z.object({
   value: z
     .string()
     .optional()
-    .describe("fill: text to type (use {{secret}} placeholders for credentials); select: option label; press: key such as Enter; goto: relative path; assert: text that must be visible"),
+    .describe(
+      "fill: text to type (use {{secret}} placeholders for credentials); select: option label; press: key such as Enter; goto: relative path; " +
+        "assert: the complete visible text of one element, as the snapshot shows it; assert_absent: text that must NOT be visible",
+    ),
+  // Coerced: providers fill an unused number with 0, "" or null; anything that is not 1, 2, 3… means "not set".
+  expects: z.coerce
+    .number()
+    .optional()
+    .describe("assert / assert_absent only: the number of the expected result this checks, from the scenario's Expected list (1, 2, …)"),
   // Plain string, not an enum: some providers fill unused fields with "" which an enum rejects.
   verdict: z.string().optional().describe('done only: "pass" = all expected results observed; "fail" = app behaved wrong; "blocked" = could not get to the point of checking'),
   reason: z.string().optional().describe("done only: what you observed, citing visible text"),
@@ -37,6 +45,7 @@ export function normalizeAction(raw: RawAgentAction): AgentAction {
     name: clean(raw.name),
     value: clean(raw.value),
     reason: clean(raw.reason),
+    expects: typeof raw.expects === "number" && Number.isInteger(raw.expects) && raw.expects > 0 ? raw.expects : undefined,
     verdict: verdict === "pass" || verdict === "fail" || verdict === "blocked" ? verdict : undefined,
   };
 }
@@ -88,6 +97,114 @@ function target(page: Page, a: AgentAction): Target {
 async function settle(t: Target, timeout: number): Promise<string> {
   await t.locator.first().waitFor({ state: "visible", timeout });
   return t.code();
+}
+
+/** A fragment shorter than this many words must be the whole text of an element to count as evidence. */
+const MIN_FRAGMENT_WORDS = 4;
+
+const squash = (s: string) => s.replace(/\s+/g, " ").trim();
+const clip = (s: string, max = 160) => (s.length > max ? s.slice(0, max - 1) + "…" : s);
+
+interface SeenText {
+  /** Everything the element shows. */
+  full: string;
+  /** Its own pieces of text, without child elements ("Invoice 7" in a list item that also holds a button). */
+  own: string[];
+}
+
+/** Texts of the visible elements a locator matches; a few are enough to judge and to report. */
+async function visibleTexts(loc: Locator, max = 5): Promise<SeenText[]> {
+  const out: SeenText[] = [];
+  const n = Math.min(await loc.count().catch(() => 0), 25);
+  for (let i = 0; i < n && out.length < max; i++) {
+    const el = loc.nth(i);
+    if (!(await el.isVisible().catch(() => false))) continue;
+    const t = await el
+      .evaluate((e) => ({
+        full: (e as HTMLElement).innerText ?? e.textContent ?? "",
+        own: [...e.childNodes].filter((c) => c.nodeType === 3).map((c) => c.textContent ?? ""),
+      }))
+      .catch(() => undefined);
+    if (t) out.push({ full: squash(t.full), own: t.own.map(squash).filter(Boolean) });
+  }
+  return out;
+}
+
+const listTexts = (seen: SeenText[]) => [...new Set(seen.map((s) => s.full).filter(Boolean))].slice(0, 3).map((s) => q(clip(s))).join(", ");
+
+/**
+ * An assert is evidence only if it cannot match by coincidence: "account found"
+ * is on a page that says "No account found for this email", and "Saved" is in
+ * "Saved searches". So the text must be the whole text of an element (letter
+ * case and spacing aside) or a fragment of at least MIN_FRAGMENT_WORDS words.
+ * Returns what to tell the agent, or undefined when the match is fine.
+ */
+export function fragmentProblem(text: string, seen: SeenText[]): string | undefined {
+  const want = squash(text).toLowerCase();
+  if (want.split(" ").length >= MIN_FRAGMENT_WORDS) return undefined;
+  if (seen.some((s) => s.full.toLowerCase() === want || s.own.some((o) => o.toLowerCase() === want))) return undefined;
+  return (
+    `${q(text)} is only a fragment of what the page shows: ${listTexts(seen)}. A short fragment can match by coincidence. ` +
+    `Assert the complete text of the element you mean (or at least ${MIN_FRAGMENT_WORDS} consecutive words of it), and check it says what the scenario expects.`
+  );
+}
+
+const visibleOnly = (loc: Locator) => loc.locator("visible=true");
+
+/** "assert": the text (or the role + name) is visible, and the match is specific enough to be evidence. */
+async function assertVisible(page: Page, a: AgentAction, timeout: number): Promise<ActionResult> {
+  const shown = (code: string): ActionResult => ({ ok: true, code: `await expect(${code}.first()).toBeVisible();` });
+  if (a.role) {
+    // A role with only a value used to match ANY element of that role.
+    const name = a.name ?? a.value;
+    const t = target(page, { ...a, name });
+    const code = await settle(t, timeout);
+    if (!name) return shown(code);
+    const role = a.role as Parameters<Page["getByRole"]>[0];
+    if ((await page.getByRole(role, { name, exact: true }).count().catch(() => 0)) > 0) return shown(code);
+    const problem = fragmentProblem(name, await visibleTexts(page.getByRole(role).filter({ hasText: name })));
+    return problem ? { ok: false, error: problem } : shown(code);
+  }
+  const text = a.value ?? a.name ?? "";
+  // getByText("") matches every element: an assert without text would always pass.
+  if (!text.trim()) return { ok: false, error: '"assert" needs the text that must be visible (value), or a role and name' };
+  const loose = page.getByText(text);
+  await loose.first().waitFor({ state: "visible", timeout });
+  if ((await visibleOnly(page.getByText(text, { exact: true })).count().catch(() => 0)) > 0) {
+    return shown(`page.getByText(${q(text)}, { exact: true })`);
+  }
+  const problem = fragmentProblem(text, await visibleTexts(loose));
+  return problem ? { ok: false, error: problem } : shown(`page.getByText(${q(text)})`);
+}
+
+/**
+ * "assert_absent": nothing visible matches. Matching is deliberately loose
+ * (any element containing the text counts as present) — for "must NOT be
+ * shown" that is the strict direction.
+ */
+async function assertAbsent(page: Page, a: AgentAction, timeout: number): Promise<ActionResult> {
+  const text = a.role ? a.name ?? a.value : a.value ?? a.name;
+  if (!a.role && !text?.trim()) return { ok: false, error: '"assert_absent" needs the text that must not be visible (value), or a role and name' };
+  let locator: Locator;
+  let code: string;
+  if (!a.role) {
+    locator = page.getByText(text!);
+    code = `page.getByText(${q(text!)})`;
+  } else {
+    locator = target(page, { ...a, name: text }).locator;
+    code = text
+      ? `page.getByRole(${q(a.role)}, { name: ${q(text)}, exact: true }).or(page.getByRole(${q(a.role)}).filter({ hasText: ${q(text)} }))`
+      : `page.getByRole(${q(a.role)})`;
+  }
+  // Something on its way out (a spinner, a toast) gets a moment to go.
+  await visibleOnly(locator).first().waitFor({ state: "hidden", timeout: Math.min(timeout, 3_000) }).catch(() => {});
+  const seen = await visibleTexts(locator, 3);
+  if (seen.length) {
+    const what = [a.role, text && q(text)].filter(Boolean).join(" ");
+    const texts = listTexts(seen);
+    return { ok: false, error: `${what} is visible on the page${texts ? `: ${texts}` : ""}.` };
+  }
+  return { ok: true, code: `await expect(${code}.locator("visible=true")).toHaveCount(0);` };
 }
 
 /** Executes one agent action. Never throws: errors go back to the agent as feedback. */
@@ -154,11 +271,11 @@ export async function executeAction(
         await page.waitForLoadState("networkidle", { timeout }).catch(() => {});
         return { ok: true };
       }
-      case "assert": {
-        const text = a.value ?? a.name ?? "";
-        const loc: Target = a.role ? target(page, a) : { locator: page.getByText(text), code: async () => `page.getByText(${q(text)})` };
-        const code = await settle(loc, timeout);
-        return { ok: true, code: `await expect(${code}.first()).toBeVisible();` };
+      case "assert":
+      case "assert_absent": {
+        const r = await (a.action === "assert" ? assertVisible(page, a, timeout) : assertAbsent(page, a, timeout));
+        // The error quotes the page, which may show what was typed into it.
+        return r.error ? { ...r, error: ctx.secrets.redact(r.error) } : r;
       }
       case "done":
         return { ok: true };
