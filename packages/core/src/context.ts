@@ -30,6 +30,9 @@ export interface BuildContextOptions {
   diffBudgetChars?: number;
 }
 
+/** No ticket key in the PR title, branch or description: nothing to verify against. */
+export class NoTicketKeyError extends Error {}
+
 export async function buildContext(opts: BuildContextOptions): Promise<VerificationContext> {
   const warnings: string[] = [];
   const key =
@@ -40,7 +43,7 @@ export async function buildContext(opts: BuildContextOptions): Promise<Verificat
     ) ??
     opts.fallbackTicketKey;
   if (!key) {
-    throw new Error(
+    throw new NoTicketKeyError(
       `No ticket key found in PR title "${opts.changes.title ?? ""}" or branch "${opts.changes.branch ?? ""}". ` +
         `Pass --ticket or name the branch like feature/PROJ-123-short-name.`,
     );
