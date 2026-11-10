@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.3.4
 
 - `agent_notes` from `.exhibit.yml` now reach the review and the planner, not only the browser agent. The
   planner uses the test accounts and data you name, and a step the notes rule out ("never submit the payment

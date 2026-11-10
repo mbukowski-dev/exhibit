@@ -91,7 +91,8 @@ jobs:
 ```
 
 Name the branch or PR title after the ticket (`feature/PROJ-123-…` or `PROJ-123: …`) and open a pull
-request. By default Exhibit only comments; `mode: check` can block merging once you trust it.
+request. Pull requests without a ticket key are skipped. By default Exhibit only comments; `mode: check` can
+block merging once you trust it.
 
 **Cost and time:** you pay your model provider directly. On the demo app a run takes about 2 minutes and
 costs about $0.10 with `gpt-5`; real apps with more criteria cost more. Every run has a hard cap
