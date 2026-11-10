@@ -1,5 +1,22 @@
 # Changelog
 
+## Unreleased
+
+- A ✅ needs evidence for every expected result: when a scenario expects several things, the browser agent must
+  check each of them with its own assert before it may report a pass. Before, one successful assert of
+  anything on the page was enough.
+- Asserts no longer accept a short fragment of a longer text: "account found" used to pass on a page that says
+  "No account found for this email". The text must be the complete text of an element, or at least four
+  words of it; otherwise the agent is shown what the page really says. An assert with no text, or with a role
+  and a value but no name, no longer matches everything.
+- New `assert_absent` check for criteria that say something must NOT be shown (no error message, no hint
+  whether an account exists). It only counts after a positive check on the same page, and generated
+  Playwright tests include it.
+- Browser dialogs (`confirm`, `alert`, `prompt`) are accepted, the way a tester clicking OK would, and their
+  text is shown to the browser agent. Before, an unhandled dialog was dismissed, so a "Delete" behind a
+  confirmation silently did nothing and a working app could be reported as not meeting a criterion.
+  Generated Playwright tests accept the dialogs the recorded run saw.
+
 ## 0.3.3
 
 - A failed criterion needs evidence about the app: a "fail" seen on an error page (HTTP 4xx/5xx) at a URL the

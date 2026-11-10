@@ -66,7 +66,7 @@ describe("browser agent (E4-1, E4-2, E4-4)", () => {
       'await page.getByRole("link", { name: "Forgot password?", exact: true }).click();',
       'await page.getByRole("textbox", { name: "Email", exact: true }).fill("ana@example.com");',
       'await page.getByRole("button", { name: "Send reset link", exact: true }).click();',
-      'await expect(page.getByText("Check your inbox").first()).toBeVisible();',
+      'await expect(page.getByText("Check your inbox", { exact: true }).first()).toBeVisible();',
     ]);
     expect(meter.steps).toHaveLength(5);
     for (const f of [r.artifacts.video, r.artifacts.trace, r.artifacts.screenshot]) {

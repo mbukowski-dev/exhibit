@@ -27,6 +27,8 @@ export function generateTests(
     const label = `${ticketKey} ${r.acIds.join(", ") || "regression"}: ${s.title}`;
     const lines = [
       ...(s.role !== "anonymous" ? [`// Requires a logged-in "${s.role}" user — add your login here (see .exhibit.yml auth).`] : []),
+      // The recorded run accepted the app's confirm/alert dialogs; unhandled, Playwright dismisses them.
+      ...(r.steps.some((st) => st.dialogs?.length) ? [`page.on("dialog", (dialog) => dialog.accept());`] : []),
       `await page.goto(${q(s.startPath || "/")});`,
       ...r.steps.filter((st) => st.ok && st.code).map((st) => st.code!),
     ];
