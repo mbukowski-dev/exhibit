@@ -106,7 +106,7 @@ model:
   max_cost_per_run_usd: 1.5
 mode: comment                      # comment (advisory) | check (fails the status on ❌)
 max_scenarios: 8
-agent_notes: |                     # test data the agent needs that isn't in the ticket
+agent_notes: |                     # your test environment: accounts, seed data, what not to touch
   Registered test account: ana@example.com
 auth:                              # if the app needs a login
   - role: user

@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- `agent_notes` from `.exhibit.yml` now reach the review and the planner, not only the browser agent. The
+  planner uses the test accounts and data you name, and a step the notes rule out ("never submit the payment
+  form") is reported as not testable instead of being planned. Notes cannot remove an acceptance criterion.
 - Pull requests Exhibit cannot or need not verify no longer fail the job. Without a ticket key in the title,
   branch or description the run is skipped with a green "Skipped" status and no comment (before: an error
   status, a ⛔ comment and a failed job, after waiting for the preview). Pull requests from forks and from

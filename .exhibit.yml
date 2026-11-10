@@ -12,7 +12,8 @@ model:
   #   agent: low
 mode: comment
 max_scenarios: 6
-# Facts the browser agent needs that are not in the ticket (no real passwords here).
+# Facts about the test environment that are not in the ticket (no real passwords here).
+# The planner and the browser agent both read them.
 agent_notes: |
   Registered test account: ana@example.com (no password needed for the reset flow).
   Any other address, e.g. nobody@example.com, is an unknown account.
