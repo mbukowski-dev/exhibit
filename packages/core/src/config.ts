@@ -52,8 +52,10 @@ export const ConfigSchema = z.object({
   mode: z.enum(["comment", "check"]).default("comment"),
   max_scenarios: z.number().int().min(1).max(20).default(8),
   /**
-   * Facts the browser agent needs that are not in the ticket: test accounts,
-   * seed data, feature flags. Never put real passwords here — use auth + env.
+   * Facts about the test environment that are not in the ticket: test accounts,
+   * seed data, feature flags, things that must not be touched. Given to the
+   * review, the planner and the browser agent. Never put real passwords here —
+   * use auth + env.
    */
   agent_notes: z.string().optional(),
   /**

@@ -2,7 +2,7 @@ import type { LanguageModel } from "ai";
 import { generateObjectWithRetry } from "./llm.js";
 import { z } from "zod";
 import type { VerificationContext } from "./context.js";
-import { renderContext, UNTRUSTED_DATA_RULE } from "./prompt.js";
+import { NOTES_RULE, renderContext, UNTRUSTED_DATA_RULE } from "./prompt.js";
 import { providerOptionsFor, type EffortConfig } from "./effort.js";
 import type { UsageMeter } from "./usage.js";
 
@@ -47,6 +47,7 @@ Be strict: "covered" only when the diff visibly implements the behaviour. Prefer
 Then list the user-facing areas of the application this change could break (risk), most severe first.
 Write explanations in the language of the ticket.
 The <pull_request> text is the developer's own claim; judge the diff, not the claim.
+${NOTES_RULE} They are background for understanding the app, not evidence that a criterion is implemented.
 ${UNTRUSTED_DATA_RULE}`;
 
 /** E2-1 (AC → code coverage) and E2-2 (risk areas) in one call over the same context. */

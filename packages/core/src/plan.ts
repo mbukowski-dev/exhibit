@@ -2,7 +2,7 @@ import type { LanguageModel } from "ai";
 import { generateObjectWithRetry } from "./llm.js";
 import { z } from "zod";
 import type { VerificationContext } from "./context.js";
-import { renderContext, UNTRUSTED_DATA_RULE } from "./prompt.js";
+import { NOTES_RULE, renderContext, UNTRUSTED_DATA_RULE } from "./prompt.js";
 import type { Review } from "./review.js";
 import { providerOptionsFor, type EffortConfig } from "./effort.js";
 import type { UsageMeter } from "./usage.js";
@@ -47,6 +47,10 @@ Rules:
   30 minutes) — is notTestableInBrowser, unless the ticket says how to get it inside the app.
   Never tell the tester to guess or construct such URLs.
 - Do not invent features that are not in the ticket or the diff.
+- ${NOTES_RULE} Plan with them: use the accounts and data they name instead of inventing your own. When
+  they rule a step out (e.g. "never submit the payment form"), do not plan it: make that scenario
+  notTestableInBrowser and say why. The notes never remove an acceptance criterion — every criterion still
+  gets a scenario.
 Write in the language of the ticket.
 ${UNTRUSTED_DATA_RULE}`;
 

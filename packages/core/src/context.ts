@@ -13,6 +13,8 @@ export interface VerificationContext {
   criteria: AcceptanceCriterion[];
   changes: ChangeSet;
   warnings: string[];
+  /** .exhibit.yml agent_notes: facts about the test environment, given to every stage. */
+  notes?: string;
 }
 
 export interface BuildContextOptions {
@@ -88,5 +90,5 @@ export async function buildContext(opts: BuildContextOptions): Promise<Verificat
   }
   if (!opts.changes.files.length) warnings.push("No changed files found.");
 
-  return { ticket, criteria, changes, warnings };
+  return { ticket, criteria, changes, warnings, notes: opts.config.agent_notes?.trim() || undefined };
 }
