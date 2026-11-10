@@ -81,7 +81,7 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
-      - uses: mbukowski-dev/exhibit@ee4df8bb58a6ba409c5d9b4cdf2e4b8c12741b04  # v0.3.2
+      - uses: mbukowski-dev/exhibit@9c32faf06d94f54974d61c0495a4a6b3f2a38a69  # v0.3.3
         with:
           preview-url: https://myapp-git-{branch}-acme.vercel.app
           openai-api-key: ${{ secrets.OPENAI_API_KEY }}
