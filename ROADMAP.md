@@ -3,7 +3,7 @@
 Exhibit is an early preview. This is what works today and what comes next. Priorities follow what early
 users run into — open an issue if something blocks you.
 
-## Works today (v0.1)
+## Works today (v0.3)
 
 - Tickets from **Jira** or a **Markdown file**; acceptance criteria from lists, a dedicated field, prose
   or Given/When/Then.
@@ -12,6 +12,10 @@ users run into — open an issue if something blocks you.
 - Browser scenarios per criterion, run by an agent on the preview deployment, with video, trace,
   screenshots, console errors and failed requests as evidence.
 - Verdict per criterion (✅ 🟡 ❌ ⚠️), safeguards against unverified passes and loops, per-run cost cap.
+- Evidence rules: every expected result needs its own check, a short fragment of a longer text does not count,
+  "must NOT be shown" can be checked, and confirmation dialogs are accepted like a tester would.
+- Requirement changes made in ticket comments are picked up and marked in the report.
+- Pull requests without a ticket, from forks or from Dependabot are skipped instead of failing.
 - Passing scenarios replayed without AI and turned into plain Playwright tests.
 - GitHub Action: one PR comment updated in place, an "Exhibit" status, evidence as workflow artifacts.
 - OpenAI or Anthropic with your own key; per-stage reasoning effort.
