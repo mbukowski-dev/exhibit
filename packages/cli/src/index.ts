@@ -10,6 +10,7 @@ import {
   buildContext,
   createMeter,
   createModel,
+  detectTicketKey,
   fetchJiraTicket,
   githubChangeSet,
   hasModelKey,
@@ -28,13 +29,16 @@ import {
   reviewChanges,
   runVerification,
   setCommitStatus,
+  skipReason,
   statusFor,
+  NoTicketKeyError,
   ticketFromFile,
   upsertPrComment,
   RunLog,
   waitForUrl,
   type RunReport,
   type ScenarioResult,
+  type Skip,
   type ExhibitConfig,
   type Review,
   type UsageMeter,
@@ -230,6 +234,23 @@ withModelOptions(program.command("ci"))
     const mode = opts.mode ?? config.mode;
     const template = opts.url ?? config.preview_url;
     if (!template) throw new Error("No preview URL. Set preview_url in .exhibit.yml or the preview-url input.");
+
+    // Pull requests Exhibit cannot or need not verify end quietly: a notice and, where the token
+    // allows it, a green "Skipped" status — not a failed job on every fork or Dependabot bump.
+    const skip = async (s: Skip) => {
+      console.log(`::notice title=Exhibit skipped::${s.notice}`);
+      await setCommitStatus(gh, pr.headSha, "success", s.status, runUrl).catch(() => {}); // read-only token on forks
+      if (env.GITHUB_OUTPUT) await appendFile(env.GITHUB_OUTPUT, "verdict=skipped\n");
+      if (env.GITHUB_STEP_SUMMARY) await appendFile(env.GITHUB_STEP_SUMMARY, `### Exhibit\n⏭️ ${s.notice}\n`);
+    };
+    const skipped = skipReason({
+      event,
+      actor: env.GITHUB_ACTOR,
+      hasModelKey: hasModelKey(config.model),
+      hasTicket: Boolean(opts.ticketFile) || Boolean(detectTicketKey({ prTitle: pr.title, branch: pr.branch, prBody: pr.body }, config.ticket_pattern)),
+    });
+    if (skipped) return skip(skipped);
+
     const baseUrl = expandPreviewUrl(template, { pr: pr.number, branch: pr.branch, sha: pr.headSha });
     const runLog = new RunLog({ debug: opts.debug, echo: (l) => console.log(l) });
     const required = requireModel(config, "exhibit ci");
@@ -278,6 +299,10 @@ withModelOptions(program.command("ci"))
         await appendFile(env.GITHUB_STEP_SUMMARY, renderMarkdownReport(report, { artifactsUrl: runUrl }) + "\n\n---\n\n" + runLog.summary(meter.modelName));
       }
     } catch (e) {
+      if (e instanceof NoTicketKeyError) {
+        // The event said there was a key, the fetched PR says there is none (e.g. the title was just edited).
+        return skip(skipReason({ event, hasModelKey: true, hasTicket: false })!);
+      }
       const msg = e instanceof Error ? e.message : String(e);
       await setCommitStatus(gh, pr.headSha, "error", `Exhibit could not run: ${msg}`, runUrl).catch(() => {});
       await upsertPrComment(gh, pr.number, `${COMMENT_MARKER}\n### Exhibit\n⛔ Could not run the verification: ${msg}${runUrl ? `\n\n[Workflow log](${runUrl})` : ""}`).catch(() => {});

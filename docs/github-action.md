@@ -47,7 +47,14 @@ What happens on every push to the PR:
 
 Notes
 
-- Pull requests from forks do not get repository secrets, so Exhibit cannot run on them.
+- **Pull requests without a ticket key** (a README fix, a `chore:` branch) are skipped: a green "Exhibit" status
+  that says "Skipped", no comment, nothing spent. Exhibit does not force every pull request to have a ticket.
+- **Pull requests from forks and from Dependabot** get no repository secrets from GitHub, so Exhibit cannot run
+  on them. They are skipped with a notice in the workflow log and the job stays green. (A missing key on your
+  own pull request is still an error, so a setup mistake does not go unnoticed.)
+- **Draft pull requests** are verified like any other. To wait until a pull request is ready for review, add
+  `if: github.event.pull_request.draft == false` to the job and `ready_for_review` to the trigger types:
+  `on: { pull_request: { types: [opened, synchronize, reopened, ready_for_review] } }`.
 - Run it only against preview/staging environments with test data and test accounts — the agent really
   clicks and submits. See [SECURITY.md](../SECURITY.md).
 - Costs are billed to your own model API key. The per-run cap is `model.max_cost_per_run_usd` in `.exhibit.yml`.

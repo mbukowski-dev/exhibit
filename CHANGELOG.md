@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Pull requests Exhibit cannot or need not verify no longer fail the job. Without a ticket key in the title,
+  branch or description the run is skipped with a green "Skipped" status and no comment (before: an error
+  status, a ⛔ comment and a failed job, after waiting for the preview). Pull requests from forks and from
+  Dependabot, which get no secrets from GitHub, are skipped with a notice. A missing model key on your own
+  pull request is still an error. The action's `verdict` output is `skipped` in these cases.
 - A ✅ needs evidence for every expected result: when a scenario expects several things, the browser agent must
   check each of them with its own assert before it may report a pass. Before, one successful assert of
   anything on the page was enough.
