@@ -27,8 +27,8 @@ re-clicking through every change.
 Exhibit is not a code-style reviewer (other tools do that well), not a framework you write tests in, and
 not a replacement for the people who approve a merge — it gives them proof to decide on.
 
-> **Early preview (v0.3).** Works end to end on GitHub; tested so far on a demo app and a real Jira Cloud site. If you'd like to try it
-> on your project, open an issue — early users get hands-on help with the setup.
+> **Early preview (v0.3).** Works end to end on GitHub; tested so far on a demo app and a real Jira Cloud
+> site. If you'd like to try it on your project, open an issue — early users get hands-on help with the setup.
 
 ## What you get in the pull request
 
@@ -51,6 +51,22 @@ A real comment from this repository's [self-test](https://github.com/mbukowski-d
 **How to read it:** ✅ verified in the browser · 🟡 the visible part works, the rest can't be checked in a
 browser · ❌ the app behaves differently than the ticket says (never given without browser evidence) ·
 ⚠️ a human needs to look.
+
+## What sets it apart
+
+- **Nothing to write.** No test code and no test framework to learn: the checks come from the acceptance
+  criteria your team already writes.
+- **Evidence, not an opinion.** Every verdict comes with what the browser saw: video and screenshots. A ❌ is
+  only given for something seen in the running app, and a ✅ only after every expected result was checked.
+- **It says what it could not check.** E-mail delivery, a link that expires in 30 minutes, anything a browser
+  cannot see is marked ⚠️ for a human instead of being guessed.
+- **You keep the tests.** Passing scenarios become plain Playwright tests, ready to commit. They run without
+  Exhibit and without AI.
+- **Tickets in your own language.** The review, the scenarios and the findings are written in the language of
+  the ticket. (An "Acceptance Criteria" heading is recognised in English and Polish; in other languages the
+  model picks the criteria out of the text.)
+- **It stays out of the way.** It runs in your GitHub Actions with your own model key, and nothing is stored on
+  our side. Pull requests without a ticket are skipped, and by default it only comments.
 
 ## How it works
 
@@ -98,6 +114,19 @@ block merging once you trust it.
 costs about $0.10 with `gpt-5`; real apps with more criteria cost more. Every run has a hard cap
 (`max_cost_per_run_usd`, default $1.50).
 
+### No Jira, or no preview deployment per pull request?
+
+- **No Jira, or just trying it out:** write the ticket as a Markdown file — a `# title` and an
+  `## Acceptance Criteria` list, like [examples/PROJ-123.md](examples/PROJ-123.md) — commit it, and replace the
+  three `jira-*` inputs with `ticket-file: path/to/ticket.md`. That is enough for a first run on one pull
+  request; for everyday use connect Jira. Criteria from the pull request description or a GitHub issue are
+  next on the [roadmap](ROADMAP.md).
+- **No preview deployment per pull request:** `preview-url` can be any address where the pull request's code is
+  running, for example a staging server you deploy the branch to (`preview-url: https://staging.myapp.com`).
+  Exhibit checks whatever is deployed there, so make sure it is the pull request's code — otherwise the verdict
+  is about a different version. You can also run it from your own machine against the app running locally: see
+  [Try it locally](#try-it-locally).
+
 ## Configuration (`.exhibit.yml`, optional)
 
 ```yaml
@@ -133,6 +162,33 @@ pnpm exhibit verify --ticket-file examples/PROJ-123.md --url http://localhost:41
 Other commands: `exhibit context` (what Exhibit would verify, no AI), `exhibit plan` (review and plan,
 no browser). Evidence and run diagnostics are written to `exhibit-artifacts/`.
 
+**On your own app:** start your app locally from the branch you want to check, then point Exhibit at your
+repository with `-C`. It compares the branch with `main` (`-b` for another base branch):
+
+```bash
+pnpm exhibit context -C ../your-app --ticket-file ../your-app/ticket.md --no-llm   # free: shows what would be verified
+pnpm exhibit verify  -C ../your-app --ticket-file ../your-app/ticket.md --url http://localhost:3000
+```
+
+With Jira, add `JIRA_BASE_URL`, `JIRA_EMAIL` and `JIRA_API_TOKEN` to `.env` and use `-t PROJ-123` instead of
+`--ticket-file`.
+
+## What it can't do yet
+
+- **Trackers and code hosts:** Jira Cloud and Markdown ticket files, on GitHub. Jira Server / Data Center,
+  Linear, GitHub Issues and GitLab are not supported yet.
+- **Browser:** Chromium at a desktop size (1280×720), in one tab. Links that open a new tab, file uploads,
+  drag and drop and menus that only open on hover are not handled yet.
+- **Pages:** it reads the page's accessibility tree, so canvas-based or poorly labelled interfaces are hard for
+  it. A screenshot fallback is on the roadmap.
+- **What a browser can't see:** e-mails, time passing, other systems. These are reported as ⚠️, never guessed.
+- **Test data:** scenarios really change data on the environment and nothing resets it between runs, so a
+  scenario like "sign up with this address" works once. Describe reusable test data in `agent_notes`.
+- **Evidence when the app needs a login:** no Playwright trace is saved, because it would record the typed
+  credentials. Video and screenshots still are.
+- **Experience so far:** a demo app and a real Jira Cloud site. Expect rough edges on a real application —
+  [open an issue](https://github.com/mbukowski-dev/exhibit/issues) and you get hands-on help.
+
 ## Security and responsible use
 
 The agent really clicks and submits forms: **run Exhibit only against preview or staging environments
@@ -152,7 +208,7 @@ can read, audit and modify everything that runs with your secrets.
 | | |
 |---|---|
 | **Free** | personal, non-commercial and educational use · repositories of open source projects · **one private repository per organization** (up to 10 contributors) · evaluation and testing, always |
-| **Commercial license** | an organization using Exhibit on more than one private repository, or on a private repository with more than 10 contributors — [get in touch](https://github.com/mbukowski-dev/exhibit/issues) |
+| **Commercial license** | an organization using Exhibit on more than one private repository, or on a private repository with more than 10 contributors — [open an issue](https://github.com/mbukowski-dev/exhibit/issues/new?title=Commercial+license) titled "Commercial license"; no details are needed in public, we move to a private channel from there |
 
 Each version becomes open source under Apache 2.0 four years after it is published. The license text is
 what counts; this table is a summary.
