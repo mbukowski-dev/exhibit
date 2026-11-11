@@ -12,6 +12,7 @@ import { acceptDialogs, describeDialogs, type SeenDialog } from "./dialogs.js";
 import { budgetNudge, checkPassEvidence, isStuck, loopNudge, MAX_PASS_REJECTIONS, type Nudge } from "./nudges.js";
 import type { RunLog } from "../runlog.js";
 import type { Hint } from "../hints.js";
+import { ModelProviderError } from "../provider-errors.js";
 
 export type ScenarioVerdict = "pass" | "fail" | "blocked";
 
@@ -371,6 +372,8 @@ export async function runScenario(scenario: Scenario, opts: RunScenarioOptions):
     artifacts.screenshot = join(dir, "final.png");
     await page.screenshot({ path: artifacts.screenshot, fullPage: true }).catch(() => (artifacts.screenshot = undefined));
   } catch (e) {
+    // The provider refuses to work (no credits, bad key): that ends the run, it is not a blocked scenario.
+    if (e instanceof ModelProviderError) throw e;
     verdict = "blocked";
     reason = e instanceof BlockedError ? e.message : `Run error: ${secrets.redact((e as Error).message.split("\n")[0] ?? "")}`;
     blocker = e instanceof BlockedError ? "login_failed" : "run_error";

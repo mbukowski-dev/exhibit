@@ -2,6 +2,7 @@ import { createAnthropic } from "@ai-sdk/anthropic";
 import { createOpenAI } from "@ai-sdk/openai";
 import type { LanguageModel } from "ai";
 import type { ExhibitConfig } from "./config.js";
+import { withProviderErrors } from "./provider-errors.js";
 import { PRICES, UsageMeter } from "./usage.js";
 
 export const DEFAULT_MODELS = {
@@ -18,11 +19,11 @@ export function createModel(
   switch (cfg.provider) {
     case "anthropic": {
       if (!env.ANTHROPIC_API_KEY) throw new Error("ANTHROPIC_API_KEY is not set");
-      return createAnthropic({ apiKey: env.ANTHROPIC_API_KEY })(name);
+      return withProviderErrors(createAnthropic({ apiKey: env.ANTHROPIC_API_KEY })(name), "anthropic");
     }
     case "openai": {
       if (!env.OPENAI_API_KEY) throw new Error("OPENAI_API_KEY is not set");
-      return createOpenAI({ apiKey: env.OPENAI_API_KEY })(name);
+      return withProviderErrors(createOpenAI({ apiKey: env.OPENAI_API_KEY })(name), "openai");
     }
   }
 }
