@@ -25,6 +25,8 @@ export const ConfigSchema = z.object({
       provider: z.enum(["anthropic", "openai"]).default("anthropic"),
       name: z.string().optional(),
       max_cost_per_run_usd: z.number().positive().default(1.5),
+      /** Seconds to wait for one answer from the model. Generous: a reasoning model may think for minutes. */
+      call_timeout_s: z.number().int().positive().default(180),
       /** [input, output] USD per 1M tokens, for models Exhibit has no price for. */
       price_per_mtok: z.tuple([z.number().nonnegative(), z.number().nonnegative()]).optional(),
       /** Reasoning effort per stage: review | plan | agent | infer → low | medium | high. */
@@ -51,6 +53,8 @@ export const ConfigSchema = z.object({
     .default([]),
   mode: z.enum(["comment", "check"]).default("comment"),
   max_scenarios: z.number().int().min(1).max(20).default(8),
+  /** Seconds one browser scenario may take before it is stopped and reported as blocked. */
+  scenario_timeout_s: z.number().int().positive().default(600),
   /**
    * Facts about the test environment that are not in the ticket: test accounts,
    * seed data, feature flags, things that must not be touched. Given to the

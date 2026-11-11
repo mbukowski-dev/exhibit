@@ -8,6 +8,9 @@
 - A model provider that refuses to work is reported as that, at once: an account without credits, a rejected
   API key or an unknown model stops the run with one sentence that says what to fix. Before, it showed up as
   "unverified" on every scenario under a green status, after three futile retries each.
+- Time limits: a model call that gets no answer within `model.call_timeout_s` (default 180) is given up
+  instead of hanging until the CI job is killed, and a browser scenario stops after `scenario_timeout_s`
+  (default 600) and is reported as blocked.
 - A blocked scenario now says what would unblock it. The report has a "To get the blocked scenarios checked"
   list outside the collapsed details: add a test account (with the `.exhibit.yml` snippet to paste) when a
   signed-in role has none or the browser ran into a sign-in page, check the account or the login script when

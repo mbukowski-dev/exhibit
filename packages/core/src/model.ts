@@ -2,7 +2,7 @@ import { createAnthropic } from "@ai-sdk/anthropic";
 import { createOpenAI } from "@ai-sdk/openai";
 import type { LanguageModel } from "ai";
 import type { ExhibitConfig } from "./config.js";
-import { withProviderErrors } from "./provider-errors.js";
+import { withCallTimeout, withProviderErrors } from "./provider-errors.js";
 import { PRICES, UsageMeter } from "./usage.js";
 
 export const DEFAULT_MODELS = {
@@ -16,14 +16,16 @@ export function createModel(
   env: NodeJS.ProcessEnv = process.env,
 ): LanguageModel {
   const name = cfg.name ?? DEFAULT_MODELS[cfg.provider];
+  // Every call gets a time limit, and a provider that refuses to work is reported as that.
+  const guarded = (model: LanguageModel) => withCallTimeout(withProviderErrors(model, cfg.provider), (cfg.call_timeout_s ?? 180) * 1000);
   switch (cfg.provider) {
     case "anthropic": {
       if (!env.ANTHROPIC_API_KEY) throw new Error("ANTHROPIC_API_KEY is not set");
-      return withProviderErrors(createAnthropic({ apiKey: env.ANTHROPIC_API_KEY })(name), "anthropic");
+      return guarded(createAnthropic({ apiKey: env.ANTHROPIC_API_KEY })(name));
     }
     case "openai": {
       if (!env.OPENAI_API_KEY) throw new Error("OPENAI_API_KEY is not set");
-      return withProviderErrors(createOpenAI({ apiKey: env.OPENAI_API_KEY })(name), "openai");
+      return guarded(createOpenAI({ apiKey: env.OPENAI_API_KEY })(name));
     }
   }
 }

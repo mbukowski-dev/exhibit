@@ -87,3 +87,39 @@ export function withProviderErrors(model: LanguageModel, provider: ProviderName)
   };
   return wrapLanguageModel({ model: model as WrappableModel, middleware });
 }
+
+/** A model call that got no answer within the time limit (E12-8). */
+export class ModelTimeoutError extends Error {
+  constructor(ms: number) {
+    super(`The model did not answer within ${Math.round(ms / 1000)} s.`);
+    this.name = "ModelTimeoutError";
+  }
+}
+
+/**
+ * E12-8: gives every model call a time limit. Without one, a connection that
+ * hangs holds the whole run until the CI job is killed. The call is not
+ * retried: a second and third hang would only multiply the wait.
+ */
+export function withCallTimeout(model: LanguageModel, ms: number): LanguageModel {
+  if (typeof model === "string") return model;
+  // The limit of each call, so that our own timeout can be told from the caller's abort.
+  const limits = new WeakMap<object, AbortSignal>();
+  const middleware: LanguageModelMiddleware = {
+    transformParams: async ({ params }) => {
+      const limit = AbortSignal.timeout(ms);
+      const next = { ...params, abortSignal: params.abortSignal ? AbortSignal.any([params.abortSignal, limit]) : limit };
+      limits.set(next, limit);
+      return next;
+    },
+    wrapGenerate: async ({ doGenerate, params }) => {
+      try {
+        return await doGenerate();
+      } catch (e) {
+        if (limits.get(params)?.aborted) throw new ModelTimeoutError(ms);
+        throw e;
+      }
+    },
+  };
+  return wrapLanguageModel({ model: model as WrappableModel, middleware });
+}

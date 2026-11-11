@@ -24,6 +24,7 @@ export type Blocker =
   | "not_testable" // the plan says a browser cannot check it
   | "login_failed" // the project's login script threw
   | "step_limit"
+  | "time_limit"
   | "stuck" // repeated a failing action after being told to stop
   | "unverified_pass" // claimed a pass it could not back with an assert
   | "guessed_url" // a "fail" seen only at a URL the agent made up
@@ -73,6 +74,8 @@ export interface RunScenarioOptions {
   meter?: UsageMeter;
   /** E4-4 limits */
   maxSteps?: number;
+  /** Wall-clock limit for one scenario (default 10 minutes). */
+  maxDurationMs?: number;
   actionTimeoutMs?: number;
   /** Optional login before the scenario, e.g. a project's login.ts (E4-3). */
   login?: (page: Page, secrets: Secrets) => Promise<void>;
@@ -224,6 +227,7 @@ export async function runScenario(scenario: Scenario, opts: RunScenarioOptions):
   const started = Date.now();
   const secrets = opts.secrets ?? new Secrets();
   const maxSteps = opts.maxSteps ?? 20;
+  const maxDurationMs = opts.maxDurationMs ?? 600_000;
   const dir = join(opts.artifactsDir, scenario.id);
   await mkdir(dir, { recursive: true });
 
@@ -291,6 +295,13 @@ export async function runScenario(scenario: Scenario, opts: RunScenarioOptions):
     for (const p of await linkedPaths(page, origin)) known.add(p);
 
     for (let n = 1; n <= maxSteps; n++) {
+      // E12-8: a wall-clock limit as well as a step limit. Slow steps add up even when each one is allowed.
+      if (Date.now() - started > maxDurationMs) {
+        verdict = "blocked";
+        blocker = "time_limit";
+        reason = `Time limit (${Math.round(maxDurationMs / 1000)} s) reached before the scenario finished.`;
+        break;
+      }
       opts.meter?.assertBudget(`${scenario.id} step ${n}`);
       opts.log?.setLabel(`${scenario.id}:step${n}`);
       const b = budgetNudge(n, maxSteps);

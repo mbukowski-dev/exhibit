@@ -51,10 +51,11 @@ export function blockedHint(r: ScenarioResult, scenario: Scenario | undefined, c
 
   switch (r.blocker) {
     case "step_limit":
+    case "time_limit":
       return {
         kind: "shortcut",
         text:
-          `Not finished within ${r.steps.length} steps. If the way there is long, describe a shortcut in \`agent_notes\` ` +
+          `Not finished within ${r.blocker === "time_limit" ? "the time limit" : `${r.steps.length} steps`}. If the way there is long, describe a shortcut in \`agent_notes\` ` +
           "(a direct URL, a record that already exists), or split the acceptance criterion into smaller ones.",
       };
     case "stuck":

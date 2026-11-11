@@ -83,7 +83,7 @@ export async function runVerification(o: RunVerificationOptions): Promise<RunRep
     results.push(
       ...(await runScenarios(
         plan.scenarios.filter((s) => s.role === role),
-        { baseUrl: o.baseUrl, model: o.model, meter: o.meter, artifactsDir: runDir, secrets: a.secrets, login: a.login, maxSteps: o.maxSteps, headless: o.headless, log: rl, effort: o.config.model.effort, notes: o.config.agent_notes, allowedOrigins: o.config.allowed_origins },
+        { baseUrl: o.baseUrl, model: o.model, meter: o.meter, artifactsDir: runDir, secrets: a.secrets, login: a.login, maxSteps: o.maxSteps, maxDurationMs: o.config.scenario_timeout_s * 1000, headless: o.headless, log: rl, effort: o.config.model.effort, notes: o.config.agent_notes, allowedOrigins: o.config.allowed_origins },
         o.onScenario,
       )),
     );
