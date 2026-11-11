@@ -5,6 +5,14 @@
 - The action no longer needs the Ubuntu package mirrors on every run. It installs the browser first and asks
   `apt` for system packages only if the browser cannot start; GitHub's runner images already have what
   Chromium needs. Before, a mirror outage stopped every run before it began, and each run spent time on `apt`.
+- A model provider that refuses to work is reported as that, at once: an account without credits, a rejected
+  API key or an unknown model stops the run with one sentence that says what to fix. Before, it showed up as
+  "unverified" on every scenario under a green status, after three futile retries each.
+- A blocked scenario now says what would unblock it. The report has a "To get the blocked scenarios checked"
+  list outside the collapsed details: add a test account (with the `.exhibit.yml` snippet to paste) when a
+  signed-in role has none or the browser ran into a sign-in page, check the account or the login script when
+  signing in failed, describe a shortcut or missing data in `agent_notes`, give an element a label, and so on.
+  The suggestion is picked from what happened in the run, not from the model's wording.
 
 ## 0.3.4
 

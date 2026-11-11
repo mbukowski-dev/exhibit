@@ -5,6 +5,7 @@ import { chromium } from "playwright";
 import { replayScenario, runScenarios, type ScenarioResult } from "./browser/agent.js";
 import { resolveRoleAuth, type RoleAuth } from "./browser/auth.js";
 import { generateTests, type GeneratedTests } from "./codegen.js";
+import { blockedHint } from "./hints.js";
 import type { AcceptanceCriterion } from "./acceptance.js";
 import type { ExhibitConfig } from "./config.js";
 import type { VerificationContext } from "./context.js";
@@ -105,6 +106,11 @@ export async function runVerification(o: RunVerificationOptions): Promise<RunRep
 
   for (const r of results) {
     rl?.log({ type: "scenario_end", scenarioId: r.scenarioId, title: r.title, verdict: r.verdict, reason: r.reason, steps: r.steps.length, durationMs: r.durationMs, replay: r.replay });
+  }
+  // E13-2: every blocked scenario gets a suggestion for what would unblock it, where there is one.
+  for (const r of results) {
+    const hint = blockedHint(r, plan.scenarios.find((s) => s.id === r.scenarioId), o.config);
+    if (hint) r.hint = hint;
   }
   const verdict = judge(ctx.criteria, review, results);
   const generatedTests = generateTests(ctx.ticket.key, plan.scenarios, results);

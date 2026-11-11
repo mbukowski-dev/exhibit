@@ -1,3 +1,4 @@
+import type { ScenarioResult } from "./browser/agent.js";
 import type { RunReport } from "./run.js";
 
 /** Hidden marker that lets us find and update our own PR comment (E6-2). */
@@ -43,6 +44,30 @@ function fence(content: string, lang = ""): string[] {
   return [f + lang, content, f];
 }
 
+/**
+ * E13-2: what would unblock the blocked scenarios — outside the collapsed
+ * details, because it is the part of the report someone has to act on.
+ * Scenarios that need the same thing share one entry (and one config snippet).
+ */
+export function renderHints(results: Pick<ScenarioResult, "scenarioId" | "verdict" | "hint">[]): string[] {
+  const groups = new Map<string, { ids: string[]; text: string; snippet?: string }>();
+  for (const r of results) {
+    if (r.verdict !== "blocked" || !r.hint) continue;
+    const key = `${r.hint.text}\n${r.hint.snippet ?? ""}`;
+    const g = groups.get(key) ?? { ids: [], text: r.hint.text, snippet: r.hint.snippet };
+    g.ids.push(cell(r.scenarioId, 12));
+    groups.set(key, g);
+  }
+  if (!groups.size) return [];
+  const out = ["", "**To get the blocked scenarios checked**", ""];
+  for (const g of groups.values()) {
+    out.push(`- **${g.ids.join(", ")}:** ${g.text}`);
+    // Indented as a whole, so the block belongs to the list item and the YAML keeps its own nesting.
+    if (g.snippet) out.push("", ...fence(g.snippet, "yaml").join("\n").split("\n").map((l) => "  " + l), "");
+  }
+  return out;
+}
+
 export interface MarkdownLinks {
   /** Where videos/traces can be downloaded (e.g. the Actions run page). */
   artifactsUrl?: string;
@@ -64,6 +89,8 @@ export function renderMarkdownReport(r: RunReport, links: MarkdownLinks = {}): s
     const changed = ac?.changedBy ? ` <br>✏️ _changed in a ticket comment by ${cell(ac.changedBy.author, 60)} (${ac.changedBy.created.slice(0, 10)})_` : "";
     out.push(`| ${ICON[c.verdict]} | **${c.acId}** ${cell(c.text, 160)}${changed} | ${cell(c.summary)} |`);
   }
+
+  out.push(...renderHints(r.results));
 
   if (r.review.coverage.length || r.review.risks.length) {
     out.push("", "<details><summary>Code review against the ticket</summary>", "");

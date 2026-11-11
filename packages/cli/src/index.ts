@@ -367,6 +367,20 @@ function printVerdict(ctx: VerificationContext, report: RunReport, cost: string)
       for (const e of [...r.failedRequests, ...r.consoleErrors].slice(0, 5)) console.log(dim(`  ${r.scenarioId}: ${e}`));
     }
   }
+  const hints = new Map<string, { ids: string[]; snippet?: string }>();
+  for (const r of report.results) {
+    if (r.verdict !== "blocked" || !r.hint) continue;
+    const g = hints.get(r.hint.text) ?? { ids: [], snippet: r.hint.snippet };
+    g.ids.push(r.scenarioId);
+    hints.set(r.hint.text, g);
+  }
+  if (hints.size) {
+    console.log(bold("\nTo get the blocked scenarios checked"));
+    for (const [text, g] of hints) {
+      console.log(`  ${g.ids.join(", ")}: ${text}`);
+      if (g.snippet) console.log(dim(g.snippet.replace(/^/gm, "      ")));
+    }
+  }
   const rel = relative(process.cwd(), report.runDir) || report.runDir;
   if (report.generatedTests) {
     console.log(bold(`\n🧪 ${report.generatedTests.scenarioIds.length} Playwright test(s) generated: ${rel}/${report.generatedTests.fileName}`));
