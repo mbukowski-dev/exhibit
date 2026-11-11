@@ -1,10 +1,22 @@
-# Exhibit verifies itself: on every PR it starts the demo app (examples/demo-app,
+# Exhibit verifies itself: on a PR it starts the demo app (examples/demo-app,
 # which has a deliberate AC3 bug), runs the action from this checkout with a real
 # model against examples/PROJ-123.md, comments on the PR and uploads full
 # diagnostics (events.jsonl, summary.md, prompts/) with the evidence.
+#
+# Every run is paid for with a real model key, so it only starts when the change
+# can affect a verdict. Docs, the changelog and the license do not need one.
 name: Exhibit self-test
 on:
   pull_request:
+    paths:
+      - "packages/**"
+      - "examples/**"
+      - "scripts/**"
+      - "action.yml"
+      - ".exhibit.yml"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - ".github/workflows/selftest.yml"
 
 permissions:
   contents: read

@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- The action no longer needs the Ubuntu package mirrors on every run. It installs the browser first and asks
+  `apt` for system packages only if the browser cannot start; GitHub's runner images already have what
+  Chromium needs. Before, a mirror outage stopped every run before it began, and each run spent time on `apt`.
+
 ## 0.3.4
 
 - `agent_notes` from `.exhibit.yml` now reach the review and the planner, not only the browser agent. The
