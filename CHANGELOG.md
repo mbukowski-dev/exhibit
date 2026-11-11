@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- A blocked scenario now says what would unblock it. The report has a "To get the blocked scenarios checked"
+  list outside the collapsed details: add a test account (with the `.exhibit.yml` snippet to paste) when a
+  signed-in role has none or the browser ran into a sign-in page, check the account or the login script when
+  signing in failed, describe a shortcut or missing data in `agent_notes`, give an element a label, and so on.
+  The suggestion is picked from what happened in the run, not from the model's wording.
+
 ## 0.3.4
 
 - `agent_notes` from `.exhibit.yml` now reach the review and the planner, not only the browser agent. The
