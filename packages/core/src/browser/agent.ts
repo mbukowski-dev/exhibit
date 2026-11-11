@@ -11,8 +11,26 @@ import { NavigationGuard } from "./guard.js";
 import { acceptDialogs, describeDialogs, type SeenDialog } from "./dialogs.js";
 import { budgetNudge, checkPassEvidence, isStuck, loopNudge, MAX_PASS_REJECTIONS, type Nudge } from "./nudges.js";
 import type { RunLog } from "../runlog.js";
+import type { Hint } from "../hints.js";
+import { ModelProviderError } from "../provider-errors.js";
 
 export type ScenarioVerdict = "pass" | "fail" | "blocked";
+
+/**
+ * Why a scenario could not be checked — the cause, recorded where it happens,
+ * so nothing has to guess it later from the wording of `reason`.
+ */
+export type Blocker =
+  | "not_testable" // the plan says a browser cannot check it
+  | "login_failed" // the project's login script threw
+  | "step_limit"
+  | "time_limit"
+  | "stuck" // repeated a failing action after being told to stop
+  | "unverified_pass" // claimed a pass it could not back with an assert
+  | "guessed_url" // a "fail" seen only at a URL the agent made up
+  | "cost_limit"
+  | "run_error"
+  | "agent"; // the agent itself gave up
 
 export interface StepRecord {
   n: number;
@@ -40,6 +58,12 @@ export interface ScenarioResult {
   replay?: "stable" | "flaky";
   /** E11: supervisor notices given to the agent during the run. */
   nudges: (Nudge & { step: number })[];
+  /** Blocked scenarios only: why. */
+  blocker?: Blocker;
+  /** Blocked scenarios only: the browser was on a page with a password field when it stopped. */
+  endedOnLoginPage?: boolean;
+  /** E13-2: what the team could change to get this scenario checked (set by the pipeline). */
+  hint?: Hint;
 }
 
 export interface RunScenarioOptions {
@@ -50,6 +74,8 @@ export interface RunScenarioOptions {
   meter?: UsageMeter;
   /** E4-4 limits */
   maxSteps?: number;
+  /** Wall-clock limit for one scenario (default 10 minutes). */
+  maxDurationMs?: number;
   actionTimeoutMs?: number;
   /** Optional login before the scenario, e.g. a project's login.ts (E4-3). */
   login?: (page: Page, secrets: Secrets) => Promise<void>;
@@ -201,6 +227,7 @@ export async function runScenario(scenario: Scenario, opts: RunScenarioOptions):
   const started = Date.now();
   const secrets = opts.secrets ?? new Secrets();
   const maxSteps = opts.maxSteps ?? 20;
+  const maxDurationMs = opts.maxDurationMs ?? 600_000;
   const dir = join(opts.artifactsDir, scenario.id);
   await mkdir(dir, { recursive: true });
 
@@ -216,6 +243,8 @@ export async function runScenario(scenario: Scenario, opts: RunScenarioOptions):
   const artifacts: ScenarioResult["artifacts"] = {};
   let verdict: ScenarioVerdict = "blocked";
   let reason = "";
+  let blocker: Blocker | undefined;
+  let endedOnLoginPage = false;
   const nudges: ScenarioResult["nudges"] = [];
   let pending: string[] = [];
   const loopsNudged = new Set<string>();
@@ -266,6 +295,13 @@ export async function runScenario(scenario: Scenario, opts: RunScenarioOptions):
     for (const p of await linkedPaths(page, origin)) known.add(p);
 
     for (let n = 1; n <= maxSteps; n++) {
+      // E12-8: a wall-clock limit as well as a step limit. Slow steps add up even when each one is allowed.
+      if (Date.now() - started > maxDurationMs) {
+        verdict = "blocked";
+        blocker = "time_limit";
+        reason = `Time limit (${Math.round(maxDurationMs / 1000)} s) reached before the scenario finished.`;
+        break;
+      }
       opts.meter?.assertBudget(`${scenario.id} step ${n}`);
       opts.log?.setLabel(`${scenario.id}:step${n}`);
       const b = budgetNudge(n, maxSteps);
@@ -284,6 +320,7 @@ export async function runScenario(scenario: Scenario, opts: RunScenarioOptions):
           steps.push({ n, action, ok: false, error: "pass rejected: expected results not verified", url: page.url() });
           if (passRejections > MAX_PASS_REJECTIONS) {
             verdict = "blocked";
+            blocker = "unverified_pass";
             reason = `Agent reported pass without verifying the expected results (rejected ${MAX_PASS_REJECTIONS}×). Last claim: ${action.reason ?? action.thought}`;
             break;
           }
@@ -295,6 +332,7 @@ export async function runScenario(scenario: Scenario, opts: RunScenarioOptions):
         const guessed = verdict === "fail" ? guessedErrorPage(lastNav, known) : undefined;
         if (guessed) {
           verdict = "blocked";
+          blocker = "guessed_url";
           reason = `${guessed} Agent's claim: ${reason}`;
           opts.log?.log({ type: "warning", message: `${scenario.id}: fail on a guessed URL treated as not verified` });
         }
@@ -325,6 +363,7 @@ export async function runScenario(scenario: Scenario, opts: RunScenarioOptions):
       if (stuck) {
         const a = stuck.action;
         verdict = "blocked";
+        blocker = "stuck";
         reason = `Agent got stuck repeating "${a.action}${a.role ? ` ${a.role}` : ""}${a.name ? ` "${a.name}"` : ""}" after being told to stop (${stuck.error}).`;
         opts.log?.log({ type: "warning", message: `${scenario.id}: stopped — ${reason}` });
         break;
@@ -332,14 +371,27 @@ export async function runScenario(scenario: Scenario, opts: RunScenarioOptions):
       const l = loopNudge(steps, loopsNudged);
       if (l) nudge(n, l);
     }
-    if (!reason) reason = `Step limit (${maxSteps}) reached before the scenario finished.`;
+    if (!reason) {
+      reason = `Step limit (${maxSteps}) reached before the scenario finished.`;
+      blocker ??= "step_limit";
+    }
+    // A password field on the last page of a blocked run: most likely a sign-in wall. Seen, not inferred from words.
+    if (verdict === "blocked") {
+      endedOnLoginPage = (await page.locator('input[type="password"]').locator("visible=true").count().catch(() => 0)) > 0;
+    }
 
     artifacts.screenshot = join(dir, "final.png");
     await page.screenshot({ path: artifacts.screenshot, fullPage: true }).catch(() => (artifacts.screenshot = undefined));
   } catch (e) {
+    // The provider refuses to work (no credits, bad key): that ends the run, it is not a blocked scenario.
+    if (e instanceof ModelProviderError) throw e;
     verdict = "blocked";
     reason = e instanceof BlockedError ? e.message : `Run error: ${secrets.redact((e as Error).message.split("\n")[0] ?? "")}`;
-    if ((e as Error).name === "BudgetExceededError") reason = (e as Error).message;
+    blocker = e instanceof BlockedError ? "login_failed" : "run_error";
+    if ((e as Error).name === "BudgetExceededError") {
+      reason = (e as Error).message;
+      blocker = "cost_limit";
+    }
   } finally {
     if (context) {
       if (recordTrace) {
@@ -368,6 +420,7 @@ export async function runScenario(scenario: Scenario, opts: RunScenarioOptions):
     artifacts,
     durationMs: Date.now() - started,
     nudges,
+    ...(verdict === "blocked" ? { blocker: blocker ?? "agent", endedOnLoginPage } : {}),
   };
 }
 
@@ -388,6 +441,7 @@ export async function runScenarios(
           scenarioId: s.id, title: s.title, acIds: s.acIds, verdict: "blocked",
           reason: `Not testable in the browser: ${s.notTestableInBrowser}`,
           steps: [], consoleErrors: [], failedRequests: [], artifacts: {}, durationMs: 0, nudges: [],
+          blocker: "not_testable",
         };
         results.push(r);
         onResult?.(r);

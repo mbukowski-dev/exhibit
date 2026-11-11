@@ -67,7 +67,7 @@ runs:
       run: |
         corepack enable
         pnpm install --frozen-lockfile
-        pnpm --filter @exhibit/core exec playwright install --with-deps chromium
+        bash scripts/install-browser.sh
 
     - name: Verify acceptance criteria
       id: run

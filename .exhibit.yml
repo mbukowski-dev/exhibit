@@ -6,12 +6,14 @@ preview_url: "http://localhost:4173"
 model:
   provider: anthropic          # switches to openai automatically if only OPENAI_API_KEY is set
   max_cost_per_run_usd: 1.5
-  # effort:                    # reasoning per stage: low | medium | high
+  # call_timeout_s: 180        # give up on a model call that gets no answer
+  # effort:                   # reasoning per stage: low | medium | high
   #   review: medium
   #   plan: low
   #   agent: low
 mode: comment
 max_scenarios: 6
+# scenario_timeout_s: 600      # stop a browser scenario that takes longer and report it as blocked
 # Facts about the test environment that are not in the ticket (no real passwords here).
 # The planner and the browser agent both read them.
 agent_notes: |

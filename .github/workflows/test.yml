@@ -17,6 +17,6 @@ jobs:
         with:
           node-version: 22
       - run: corepack enable && pnpm install --frozen-lockfile
-      - run: pnpm --filter @exhibit/core exec playwright install --with-deps chromium
+      - run: bash scripts/install-browser.sh
       - run: pnpm -r typecheck
       - run: pnpm test
