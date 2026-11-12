@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- New `language` setting: `auto` (default) writes in the language of each ticket; a code or a name (`pl`,
+  `Polish`, `Deutsch`) fixes the language of the review, the scenarios and the findings, whatever language the
+  ticket is in. The browser agent now follows it too. Text quoted from the app or the ticket is never
+  translated. With `language: pl` the fixed words of the report are Polish as well.
+- New `acceptance_headings` setting: your own headings for the acceptance criteria section of a ticket, e.g.
+  "Akzeptanzkriterien", next to the built-in English and Polish ones.
+- New [docs/configuration.md](docs/configuration.md): every setting and action input with its default and what
+  it changes. A test keeps it complete.
 - The action no longer needs the Ubuntu package mirrors on every run. It installs the browser first and asks
   `apt` for system packages only if the browser cannot start; GitHub's runner images already have what
   Chromium needs. Before, a mirror outage stopped every run before it began, and each run spent time on `apt`.

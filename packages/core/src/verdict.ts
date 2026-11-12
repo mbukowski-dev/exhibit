@@ -1,5 +1,6 @@
 import type { ScenarioResult } from "./browser/agent.js";
 import type { AcceptanceCriterion } from "./acceptance.js";
+import { labelsFor } from "./language.js";
 import type { Review } from "./review.js";
 
 export type AcVerdict = "pass" | "partial" | "fail" | "unverified";
@@ -29,7 +30,9 @@ export interface RunVerdict {
  *   a ❌ is only ever given on browser evidence, because "missing in the diff"
  *   does not mean "missing in the app" (lesson from the first real run).
  */
-export function judge(criteria: AcceptanceCriterion[], review: Review, results: ScenarioResult[]): RunVerdict {
+export function judge(criteria: AcceptanceCriterion[], review: Review, results: ScenarioResult[], language?: string): RunVerdict {
+  // The judge's own sentences follow the report language; what the model and the agent wrote is quoted as is.
+  const L = labelsFor(language).judge;
   const out: AcResult[] = criteria.map((ac) => {
     const code = review.coverage.find((c) => c.acId === ac.id);
     const scenarios = results
@@ -47,18 +50,18 @@ export function judge(criteria: AcceptanceCriterion[], review: Review, results: 
       const notRun = scenarios.filter((s) => s.verdict !== "pass");
       verdict = notRun.length ? "partial" : "pass";
       summary = passed.map((s) => `${s.scenarioId}: ${s.reason}`).join(" ");
-      if (notRun.length) summary += ` Not verified: ${notRun.map((s) => `${s.scenarioId} — ${s.reason}`).join(" ")}`;
-      if (code?.status === "missing") summary += " (Note: code review found no implementation in the diff — it may predate this PR.)";
+      if (notRun.length) summary += ` ${L.notVerified} ${notRun.map((s) => `${s.scenarioId} — ${s.reason}`).join(" ")}`;
+      if (code?.status === "missing") summary += ` ${L.mayPredate}`;
     } else if (code?.status === "missing") {
       // "missing" means "not in this diff" — the feature may already exist.
       // Without browser evidence that is a question for a human, not a ❌.
       verdict = "unverified";
       const why = scenarios.map((s) => s.reason).filter(Boolean).join(" ");
-      summary = `Not in this change and could not be verified in the browser. Code review: ${code.explanation}${why ? ` Browser: ${why}` : ""}`;
+      summary = `${L.notInChange} ${code.explanation}${why ? ` ${L.browser} ${why}` : ""}`;
     } else {
       verdict = "unverified";
-      const why = scenarios.map((s) => s.reason).filter(Boolean).join(" ") || "No scenario covered this criterion.";
-      summary = code ? `Code: ${code.status}. ${why}` : why;
+      const why = scenarios.map((s) => s.reason).filter(Boolean).join(" ") || L.noScenario;
+      summary = code ? `${L.code} ${code.status}. ${why}` : why;
     }
     return { acId: ac.id, text: ac.text, verdict, summary, code, scenarios };
   });

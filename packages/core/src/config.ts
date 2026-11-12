@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { parse as parseYaml } from "yaml";
 import { z } from "zod";
+import { LANGUAGE_PATTERN } from "./language.js";
 
 export const ConfigSchema = z.object({
   tracker: z.enum(["jira"]).default("jira"),
@@ -19,6 +20,21 @@ export const ConfigSchema = z.object({
       },
       { message: "ticket_pattern is not a valid regular expression" },
     ),
+  /**
+   * Language of the review, the scenarios and the findings. "auto" follows the
+   * ticket; a name or code ("pl", "Polish", "Deutsch") fixes it. The fixed words
+   * of the report exist in English and Polish.
+   */
+  language: z
+    .string()
+    .trim()
+    .regex(LANGUAGE_PATTERN, { message: 'language must be "auto" or a language name or code, e.g. pl, Polish, Deutsch' })
+    .default("auto"),
+  /**
+   * Extra headings that start the acceptance criteria section of a ticket,
+   * besides "Acceptance Criteria" / "Kryteria akceptacji", e.g. "Akzeptanzkriterien".
+   */
+  acceptance_headings: z.array(z.string().trim().min(1).max(60)).max(20).default([]),
   preview_url: z.string().optional(),
   model: z
     .object({

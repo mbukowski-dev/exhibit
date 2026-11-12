@@ -1,4 +1,5 @@
 import type { ScenarioResult } from "./browser/agent.js";
+import { labelsFor } from "./language.js";
 import type { RunReport } from "./run.js";
 
 /** Hidden marker that lets us find and update our own PR comment (E6-2). */
@@ -6,12 +7,6 @@ export const COMMENT_MARKER = "<!-- exhibit-report -->";
 
 const ICON = { pass: "✅", partial: "🟡", fail: "❌", unverified: "⚠️" } as const;
 const SCENARIO_ICON = { pass: "✅", fail: "❌", blocked: "⛔" } as const;
-const COVERAGE = { covered: "✅ covered", partial: "🟡 partial", missing: "❌ missing", unclear: "❔ unclear" } as const;
-const HEADLINE = {
-  pass: "✅ All acceptance criteria verified",
-  fail: "❌ Acceptance criteria not met",
-  needs_review: "⚠️ Needs human review",
-} as const;
 
 /**
  * Text that came from the model, the page under test, the ticket or the PR is
@@ -49,7 +44,7 @@ function fence(content: string, lang = ""): string[] {
  * details, because it is the part of the report someone has to act on.
  * Scenarios that need the same thing share one entry (and one config snippet).
  */
-export function renderHints(results: Pick<ScenarioResult, "scenarioId" | "verdict" | "hint">[]): string[] {
+export function renderHints(results: Pick<ScenarioResult, "scenarioId" | "verdict" | "hint">[], language?: string): string[] {
   const groups = new Map<string, { ids: string[]; text: string; snippet?: string }>();
   for (const r of results) {
     if (r.verdict !== "blocked" || !r.hint) continue;
@@ -59,7 +54,7 @@ export function renderHints(results: Pick<ScenarioResult, "scenarioId" | "verdic
     groups.set(key, g);
   }
   if (!groups.size) return [];
-  const out = ["", "**To get the blocked scenarios checked**", ""];
+  const out = ["", `**${labelsFor(language).unblock}**`, ""];
   for (const g of groups.values()) {
     out.push(`- **${g.ids.join(", ")}:** ${g.text}`);
     // Indented as a whole, so the block belongs to the list item and the YAML keeps its own nesting.
@@ -79,49 +74,51 @@ export function renderMarkdownReport(r: RunReport, links: MarkdownLinks = {}): s
   const partial = v.criteria.filter((c) => c.verdict === "partial").length;
   const ticket = r.ticket.url && /^https:\/\//.test(r.ticket.url) ? `[${line(r.ticket.key, 40)}](${encodeURI(r.ticket.url)})` : line(r.ticket.key, 40);
   const out: string[] = [COMMENT_MARKER];
+  // The fixed words of the report follow `language` in .exhibit.yml (English and Polish are built in).
+  const L = labelsFor(r.language);
 
   out.push(`### Exhibit · ${ticket} ${line(r.ticket.summary, 200)}`);
-  out.push(`**${HEADLINE[v.overall]}** — ${passed}/${v.criteria.length} acceptance criteria verified${partial ? `, ${partial} partly` : ""}`);
+  out.push(`**${L[v.overall]}** — ${L.verified(passed, v.criteria.length, partial)}`);
   out.push("");
-  out.push("| | Acceptance criterion | Evidence |", "|---|---|---|");
+  out.push(`| | ${L.criterion} | ${L.evidence} |`, "|---|---|---|");
   for (const c of v.criteria) {
     const ac = r.criteria.find((a) => a.id === c.acId);
-    const changed = ac?.changedBy ? ` <br>✏️ _changed in a ticket comment by ${cell(ac.changedBy.author, 60)} (${ac.changedBy.created.slice(0, 10)})_` : "";
+    const changed = ac?.changedBy ? ` <br>✏️ _${L.changed(cell(ac.changedBy.author, 60), ac.changedBy.created.slice(0, 10))}_` : "";
     out.push(`| ${ICON[c.verdict]} | **${c.acId}** ${cell(c.text, 160)}${changed} | ${cell(c.summary)} |`);
   }
 
-  out.push(...renderHints(r.results));
+  out.push(...renderHints(r.results, r.language));
 
   if (r.review.coverage.length || r.review.risks.length) {
-    out.push("", "<details><summary>Code review against the ticket</summary>", "");
+    out.push("", `<details><summary>${L.review}</summary>`, "");
     for (const c of r.review.coverage) {
       const files = c.evidence.map((e) => `\`${line(e.file, 120)}\``).join(", ");
-      out.push(`- **${line(c.acId, 20)}** ${COVERAGE[c.status]} — ${line(c.explanation)}${files ? ` (${files})` : ""}`);
+      out.push(`- **${line(c.acId, 20)}** ${L.coverage[c.status]} — ${line(c.explanation)}${files ? ` (${files})` : ""}`);
     }
     if (r.review.risks.length) {
-      out.push("", "**Risk areas**");
+      out.push("", `**${L.risks}**`);
       for (const k of r.review.risks) out.push(`- \`${k.severity}\` ${line(k.area, 80)} — ${line(k.reason)}`);
     }
     out.push("", "</details>");
   }
 
-  out.push("", `<details><summary>Scenarios (${r.results.length})</summary>`, "");
+  out.push("", `<details><summary>${L.scenarios} (${r.results.length})</summary>`, "");
   for (const s of r.results) {
     const replay = s.replay ? ` · replay: ${s.replay}` : "";
-    out.push(`**${SCENARIO_ICON[s.verdict]} ${s.scenarioId} ${line(s.title, 160)}** _(${s.acIds.join(", ") || "regression"} · ${s.steps.length} steps${replay})_`);
+    out.push(`**${SCENARIO_ICON[s.verdict]} ${s.scenarioId} ${line(s.title, 160)}** _(${s.acIds.join(", ") || L.regression} · ${s.steps.length} ${L.steps}${replay})_`);
     if (s.reason) out.push(`> ${line(s.reason)}`);
     const errs = [...s.failedRequests, ...s.consoleErrors].slice(0, 3);
     if (errs.length) out.push("", ...fence(errs.join("\n")));
     out.push("");
   }
-  if (r.plan.skipped.length) out.push(`_Not run (limit \`max_scenarios\`): ${line(r.plan.skipped.map((s) => s.title).join("; "))}_`, "");
+  if (r.plan.skipped.length) out.push(`_${L.notRun}: ${line(r.plan.skipped.map((s) => s.title).join("; "))}_`, "");
   out.push("</details>");
 
   if (r.generatedTests) {
     const n = r.generatedTests.scenarioIds.length;
     out.push(
       "",
-      `<details><summary>🧪 ${n} generated Playwright test${n > 1 ? "s" : ""} — <code>${r.generatedTests.fileName}</code></summary>`,
+      `<details><summary>🧪 ${L.tests(n)} — <code>${r.generatedTests.fileName}</code></summary>`,
       "",
       ...fence(r.generatedTests.content.trimEnd(), "ts"),
       "</details>",
@@ -131,7 +128,7 @@ export function renderMarkdownReport(r: RunReport, links: MarkdownLinks = {}): s
   if (r.warnings.length) out.push("", ...r.warnings.map((w) => `> ⚠️ ${line(w)}`));
 
   const cost = `${r.usage.priceKnown ? "" : "≤"}$${r.usage.costUsd.toFixed(2)}`;
-  const evidence = links.artifactsUrl ? `📎 [Videos & traces](${links.artifactsUrl}) · ` : "";
-  out.push("", `<sub>${evidence}${cost} · ${Math.round(r.durationMs / 1000)}s · ${r.usage.model} · tested ${line(r.baseUrl, 200)}</sub>`);
+  const evidence = links.artifactsUrl ? `📎 [${L.artifacts}](${links.artifactsUrl}) · ` : "";
+  out.push("", `<sub>${evidence}${cost} · ${Math.round(r.durationMs / 1000)}s · ${r.usage.model} · ${L.tested} ${line(r.baseUrl, 200)}</sub>`);
   return out.join("\n");
 }

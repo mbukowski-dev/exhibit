@@ -13,6 +13,7 @@ import { budgetNudge, checkPassEvidence, isStuck, loopNudge, MAX_PASS_REJECTIONS
 import type { RunLog } from "../runlog.js";
 import type { Hint } from "../hints.js";
 import { ModelProviderError } from "../provider-errors.js";
+import { languageRule } from "../language.js";
 
 export type ScenarioVerdict = "pass" | "fail" | "blocked";
 
@@ -89,6 +90,8 @@ export interface RunScenarioOptions {
   notes?: string;
   /** .exhibit.yml allowed_origins: e.g. an SSO login page. */
   allowedOrigins?: string[];
+  /** .exhibit.yml language: "auto" or the language to write findings in. */
+  language?: string;
 }
 
 const SYSTEM = `You are Exhibit's browser agent. You verify ONE test scenario in a web application.
@@ -165,7 +168,8 @@ async function nextAction(prompt: string, opts: RunScenarioOptions, scenarioId: 
     generateObject({
       model: opts.model,
       schema: AgentActionSchema,
-      system: SYSTEM,
+      // What the agent writes ("thought", "reason") ends up in the report, so it follows the report's language.
+      system: `${SYSTEM}\n- ${languageRule(opts.language, "scenario")}`,
       prompt: p,
       providerOptions: providerOptionsFor("agent", opts.effort),
     });

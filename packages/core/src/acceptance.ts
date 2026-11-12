@@ -11,8 +11,16 @@ export interface AcceptanceCriterion {
   changedBy?: { author: string; created: string; quote: string; previousText?: string };
 }
 
-const SECTION_HEADING =
-  /^\s*(?:#+\s*|\*+)?\s*(acceptance criteria|acceptance|kryteria akceptacji|definition of done|AC)\s*:?\s*\**\s*$/i;
+const BUILT_IN_HEADINGS = ["acceptance criteria", "acceptance", "kryteria akceptacji", "definition of done", "AC"];
+
+/**
+ * A line that starts the acceptance criteria section. `extra` are the team's
+ * own headings from .exhibit.yml (`acceptance_headings`), matched as plain text.
+ */
+function sectionHeading(extra: string[] = []): RegExp {
+  const words = [...BUILT_IN_HEADINGS, ...extra].map((h) => h.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).filter(Boolean);
+  return new RegExp(`^\\s*(?:#+\\s*|\\*+)?\\s*(${words.join("|")})\\s*:?\\s*\\**\\s*$`, "i");
+}
 const LIST_ITEM = /^\s*(?:[-*•]|\d+[.)]|\[[ xX]?\])\s+(.*\S)\s*$/;
 const ANY_HEADING = /^\s*#+\s+\S/;
 const GHERKIN_START = /^\s*(?:scenario|given|scenariusz|zakładając)\b/i;
@@ -72,7 +80,8 @@ function gherkinScenarios(text: string): string[] {
  * "Acceptance Criteria" section in the description, Gherkin scenarios.
  * Returns [] when nothing obvious is found — callers may fall back to the LLM.
  */
-export function extractAcceptanceCriteria(ticket: Ticket): AcceptanceCriterion[] {
+export function extractAcceptanceCriteria(ticket: Ticket, opts: { headings?: string[] } = {}): AcceptanceCriterion[] {
+  const SECTION_HEADING = sectionHeading(opts.headings);
   if (ticket.acceptanceField?.trim()) {
     const items = listItems(ticket.acceptanceField.split("\n"));
     if (items.length) return number(items, "field");

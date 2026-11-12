@@ -2,6 +2,7 @@ import type { LanguageModel } from "ai";
 import { generateObjectWithRetry } from "./llm.js";
 import { z } from "zod";
 import type { VerificationContext } from "./context.js";
+import { languageRule } from "./language.js";
 import { NOTES_RULE, renderContext, UNTRUSTED_DATA_RULE } from "./prompt.js";
 import type { Review } from "./review.js";
 import { providerOptionsFor, type EffortConfig } from "./effort.js";
@@ -51,7 +52,7 @@ Rules:
   they rule a step out (e.g. "never submit the payment form"), do not plan it: make that scenario
   notTestableInBrowser and say why. The notes never remove an acceptance criterion — every criterion still
   gets a scenario.
-Write in the language of the ticket.
+{{LANGUAGE}}
 ${UNTRUSTED_DATA_RULE}`;
 
 /** E3-1 (scenarios mapped to AC) and E3-2 (risk-based priority + limit). */
@@ -72,7 +73,7 @@ export async function planVerification(
   const { object, usage } = await generateObjectWithRetry({
     model,
     schema: PlanSchema,
-    system: SYSTEM,
+    system: SYSTEM.replace("{{LANGUAGE}}", languageRule(ctx.language, "ticket")),
     // The diff is already distilled into the review; skipping it keeps the plan step cheap.
     prompt: renderContext(ctx, { includeDiff: false }) + "\n\n" + reviewText,
     providerOptions: providerOptionsFor("plan", opts.effort),
