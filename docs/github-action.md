@@ -58,3 +58,54 @@ Notes
 - Run it only against preview/staging environments with test data and test accounts — the agent really
   clicks and submits. See [SECURITY.md](../SECURITY.md).
 - Costs are billed to your own model API key. The per-run cap is `model.max_cost_per_run_usd` in `.exhibit.yml`.
+- Every setting and input, with its default: [configuration.md](configuration.md).
+
+## Accept generated tests with a comment
+
+Scenarios that pass become a Playwright test file in the report. With one more workflow, a comment that says
+`/accept-tests` commits that file to the pull request's branch — no copying and pasting.
+
+It is **off until you add this file**, because it needs permission to write to your repository. Save it as
+`.github/workflows/exhibit-accept-tests.yml` on your default branch:
+
+```yaml
+name: Exhibit accept tests
+on:
+  issue_comment:
+    types: [created]
+
+permissions: {}
+
+jobs:
+  accept-tests:
+    if: github.event.issue.pull_request && startsWith(github.event.comment.body, '/accept-tests')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write        # commit the test file to the pull request's branch
+      pull-requests: write   # reply in the pull request
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+      - uses: mbukowski-dev/exhibit@<full commit SHA of the release you use>
+```
+
+No model key, no Jira access and no preview are needed for this job, and it costs nothing to run.
+
+What happens when someone comments `/accept-tests`:
+
+1. Exhibit checks that the person has **write access** to the repository. Anyone else gets a short refusal.
+2. It takes the test file from **its own latest report** on the pull request — never from the comment that asked.
+3. It commits the file to the pull request's branch, into `tests/exhibit/` (change the folder with `tests.dir` in
+   `.exhibit.yml`), and replies with the path and the commit. If the same file is already there, it says so and
+   commits nothing.
+
+Good to know:
+
+- **Pull requests from forks are refused**: Exhibit does not push to other people's repositories.
+- **Your CI does not start on that commit.** GitHub does not run workflows for commits made by a workflow's own
+  token. Push again or re-run your checks to run the new tests. It also means the commit does not start a new,
+  paid Exhibit run.
+- **Keep it a separate job.** The job that verifies pull requests should stay at `contents: read`; only this one
+  writes. It checks out your default branch, not the pull request, so no code from the pull request runs with
+  write access.
+- The tests are plain Playwright. To run them: `npx playwright test tests/exhibit`.

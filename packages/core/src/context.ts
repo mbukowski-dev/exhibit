@@ -15,6 +15,8 @@ export interface VerificationContext {
   warnings: string[];
   /** .exhibit.yml agent_notes: facts about the test environment, given to every stage. */
   notes?: string;
+  /** .exhibit.yml language: "auto" (follow the ticket) or the language to write in. */
+  language?: string;
 }
 
 export interface BuildContextOptions {
@@ -52,7 +54,7 @@ export async function buildContext(opts: BuildContextOptions): Promise<Verificat
   }
 
   const ticket = await opts.fetchTicket(key);
-  let criteria = extractAcceptanceCriteria(ticket);
+  let criteria = extractAcceptanceCriteria(ticket, { headings: opts.config.acceptance_headings });
 
   if (!criteria.length) {
     if (opts.model) {
@@ -90,5 +92,5 @@ export async function buildContext(opts: BuildContextOptions): Promise<Verificat
   }
   if (!opts.changes.files.length) warnings.push("No changed files found.");
 
-  return { ticket, criteria, changes, warnings, notes: opts.config.agent_notes?.trim() || undefined };
+  return { ticket, criteria, changes, warnings, notes: opts.config.agent_notes?.trim() || undefined, language: opts.config.language };
 }

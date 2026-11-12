@@ -60,13 +60,18 @@ browser · ❌ the app behaves differently than the ticket says (never given wit
   only given for something seen in the running app, and a ✅ only after every expected result was checked.
 - **It says what it could not check.** E-mail delivery, a link that expires in 30 minutes, anything a browser
   cannot see is marked ⚠️ for a human instead of being guessed.
-- **You keep the tests.** Passing scenarios become plain Playwright tests, ready to commit. They run without
-  Exhibit and without AI.
-- **Tickets in your own language.** The review, the scenarios and the findings are written in the language of
-  the ticket. (An "Acceptance Criteria" heading is recognised in English and Polish; in other languages the
-  model picks the criteria out of the text.)
+- **You keep the tests.** Passing scenarios become plain Playwright tests that run without Exhibit and without
+  AI. Comment `/accept-tests` on the pull request and they are committed to its branch
+  ([optional, one small workflow](docs/github-action.md#accept-generated-tests-with-a-comment)).
+- **Your language.** The review, the scenarios and the findings follow the language of each ticket, or one
+  language you choose (`language: pl`) whatever the tickets are written in. Text quoted from your app is never
+  translated. Your own heading for the criteria section ("Akzeptanzkriterien") is one line of configuration.
 - **It stays out of the way.** It runs in your GitHub Actions with your own model key, and nothing is stored on
   our side. Pull requests without a ticket are skipped, and by default it only comments.
+- **Good defaults, and every one of them is yours to change.** It runs without a configuration file. The
+  language, the model and how hard it thinks at each stage, the cost cap, the time limits, how many scenarios
+  it runs and whether it may block a merge are each one line in `.exhibit.yml` —
+  [every setting with its default](docs/configuration.md).
 
 ## How it works
 
@@ -129,8 +134,12 @@ costs about $0.10 with `gpt-5`; real apps with more criteria cost more. Every ru
 
 ## Configuration (`.exhibit.yml`, optional)
 
+Nothing here is required. The most common settings are below; **[docs/configuration.md](docs/configuration.md)**
+lists every setting with its default and what it changes.
+
 ```yaml
 preview_url: "https://pr-{pr}.myapp.vercel.app"   # {pr}, {branch}, {sha} are filled in
+language: auto                     # auto = the ticket's language; or pl, Polish, de, Deutsch, …
 model:
   provider: openai                 # openai | anthropic — picked automatically from the key you set
   max_cost_per_run_usd: 1.5

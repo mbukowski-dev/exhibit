@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { parse as parseYaml } from "yaml";
 import { z } from "zod";
+import { LANGUAGE_PATTERN } from "./language.js";
 
 export const ConfigSchema = z.object({
   tracker: z.enum(["jira"]).default("jira"),
@@ -19,6 +20,21 @@ export const ConfigSchema = z.object({
       },
       { message: "ticket_pattern is not a valid regular expression" },
     ),
+  /**
+   * Language of the review, the scenarios and the findings. "auto" follows the
+   * ticket; a name or code ("pl", "Polish", "Deutsch") fixes it. The fixed words
+   * of the report exist in English and Polish.
+   */
+  language: z
+    .string()
+    .trim()
+    .regex(LANGUAGE_PATTERN, { message: 'language must be "auto" or a language name or code, e.g. pl, Polish, Deutsch' })
+    .default("auto"),
+  /**
+   * Extra headings that start the acceptance criteria section of a ticket,
+   * besides "Acceptance Criteria" / "Kryteria akceptacji", e.g. "Akzeptanzkriterien".
+   */
+  acceptance_headings: z.array(z.string().trim().min(1).max(60)).max(20).default([]),
   preview_url: z.string().optional(),
   model: z
     .object({
@@ -55,6 +71,23 @@ export const ConfigSchema = z.object({
   max_scenarios: z.number().int().min(1).max(20).default(8),
   /** Seconds one browser scenario may take before it is stopped and reported as blocked. */
   scenario_timeout_s: z.number().int().positive().default(600),
+  /** Generated tests. */
+  tests: z
+    .object({
+      /**
+       * Folder in the repository where `/accept-tests` commits the generated test file.
+       * A plain relative path: it cannot leave the repository or point into .github.
+       */
+      dir: z
+        .string()
+        .trim()
+        .regex(/^(?!\/)(?!\.github(\/|$))(?!.*\.\.)[A-Za-z0-9._\/-]{1,120}$/, {
+          message: "tests.dir must be a folder inside the repository, e.g. tests/exhibit (no leading /, no .., not .github)",
+        })
+        .transform((d) => d.replace(/\/+$/, ""))
+        .default("tests/exhibit"),
+    })
+    .prefault({}),
   /**
    * Facts about the test environment that are not in the ticket: test accounts,
    * seed data, feature flags, things that must not be touched. Given to the

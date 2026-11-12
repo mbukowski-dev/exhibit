@@ -16,7 +16,11 @@ users run into — open an issue if something blocks you.
   "must NOT be shown" can be checked, and confirmation dialogs are accepted like a tester would.
 - Requirement changes made in ticket comments are picked up and marked in the report.
 - Pull requests without a ticket, from forks or from Dependabot are skipped instead of failing.
-- Passing scenarios replayed without AI and turned into plain Playwright tests.
+- Passing scenarios replayed without AI and turned into plain Playwright tests; a `/accept-tests` comment
+  commits them to the pull request (opt-in).
+- The report in the language of the ticket, or in one language you choose; every setting documented.
+- Clear answers when something around it fails: no credits or a bad key at the model provider, time limits,
+  and what would unblock a blocked scenario.
 - GitHub Action: one PR comment updated in place, an "Exhibit" status, evidence as workflow artifacts.
 - OpenAI or Anthropic with your own key; per-stage reasoning effort.
 - Run diagnostics (`events.jsonl`, `summary.md`) for every run.
@@ -24,7 +28,6 @@ users run into — open an issue if something blocks you.
 ## Next
 
 - **Acceptance criteria from the PR description or a linked GitHub issue** — no Jira token needed.
-- Commit the generated tests from the PR with a `/accept-tests` comment.
 - Comment commands: `/verify`, `/verify AC2`.
 - Agent as a tool-calling conversation with prompt caching — faster and cheaper runs.
 - Review that can open unchanged files in the repository, not only the diff.

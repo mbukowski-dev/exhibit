@@ -3,6 +3,8 @@
 tracker: jira
 ticket_pattern: "[A-Z][A-Z0-9]+-\\d+"
 preview_url: "http://localhost:4173"
+# language: auto               # auto = the ticket's language; or pl, Polish, de, Deutsch, …
+# acceptance_headings: ["Akzeptanzkriterien"]   # your own heading for the criteria section of a ticket
 model:
   provider: anthropic          # switches to openai automatically if only OPENAI_API_KEY is set
   max_cost_per_run_usd: 1.5

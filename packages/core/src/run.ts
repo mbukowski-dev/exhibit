@@ -31,6 +31,8 @@ export interface RunReport {
   durationMs: number;
   /** Path of summary.md when a RunLog was given. */
   diagnostics?: string;
+  /** .exhibit.yml language; picks the fixed words of the report. */
+  language?: string;
 }
 
 export interface RunVerificationOptions {
@@ -83,7 +85,7 @@ export async function runVerification(o: RunVerificationOptions): Promise<RunRep
     results.push(
       ...(await runScenarios(
         plan.scenarios.filter((s) => s.role === role),
-        { baseUrl: o.baseUrl, model: o.model, meter: o.meter, artifactsDir: runDir, secrets: a.secrets, login: a.login, maxSteps: o.maxSteps, maxDurationMs: o.config.scenario_timeout_s * 1000, headless: o.headless, log: rl, effort: o.config.model.effort, notes: o.config.agent_notes, allowedOrigins: o.config.allowed_origins },
+        { baseUrl: o.baseUrl, model: o.model, meter: o.meter, artifactsDir: runDir, secrets: a.secrets, login: a.login, maxSteps: o.maxSteps, maxDurationMs: o.config.scenario_timeout_s * 1000, headless: o.headless, log: rl, effort: o.config.model.effort, notes: o.config.agent_notes, allowedOrigins: o.config.allowed_origins, language: o.config.language },
         o.onScenario,
       )),
     );
@@ -112,7 +114,7 @@ export async function runVerification(o: RunVerificationOptions): Promise<RunRep
     const hint = blockedHint(r, plan.scenarios.find((s) => s.id === r.scenarioId), o.config);
     if (hint) r.hint = hint;
   }
-  const verdict = judge(ctx.criteria, review, results);
+  const verdict = judge(ctx.criteria, review, results, o.config.language);
   const generatedTests = generateTests(ctx.ticket.key, plan.scenarios, results);
   if (generatedTests) await writeFile(join(runDir, generatedTests.fileName), generatedTests.content);
 
@@ -129,6 +131,7 @@ export async function runVerification(o: RunVerificationOptions): Promise<RunRep
     warnings: ctx.warnings,
     runDir,
     durationMs: Date.now() - started,
+    language: o.config.language,
   };
   if (rl) {
     rl.summary(o.meter.modelName);

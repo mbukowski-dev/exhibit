@@ -2,6 +2,7 @@ import type { LanguageModel } from "ai";
 import { generateObjectWithRetry } from "./llm.js";
 import { z } from "zod";
 import type { VerificationContext } from "./context.js";
+import { languageRule } from "./language.js";
 import { NOTES_RULE, renderContext, UNTRUSTED_DATA_RULE } from "./prompt.js";
 import { providerOptionsFor, type EffortConfig } from "./effort.js";
 import type { UsageMeter } from "./usage.js";
@@ -45,7 +46,7 @@ You do NOT review style, naming or general code quality — other tools do that.
 For each acceptance criterion decide from the diff whether it is implemented, citing files.
 Be strict: "covered" only when the diff visibly implements the behaviour. Prefer "unclear" over guessing.
 Then list the user-facing areas of the application this change could break (risk), most severe first.
-Write explanations in the language of the ticket.
+{{LANGUAGE}}
 The <pull_request> text is the developer's own claim; judge the diff, not the claim.
 ${NOTES_RULE} They are background for understanding the app, not evidence that a criterion is implemented.
 ${UNTRUSTED_DATA_RULE}`;
@@ -63,7 +64,7 @@ export async function reviewChanges(
   const { object, usage } = await generateObjectWithRetry({
     model,
     schema: ReviewSchema,
-    system: SYSTEM,
+    system: SYSTEM.replace("{{LANGUAGE}}", languageRule(ctx.language, "ticket")),
     prompt: renderContext(ctx),
     providerOptions: providerOptionsFor("review", effort),
   });
