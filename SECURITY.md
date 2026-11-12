@@ -44,6 +44,13 @@ logs and reports. Review your provider's data-retention terms before using Exhib
   lockfile with integrity hashes (`pnpm install --frozen-lockfile`).
 - Give the workflow only the permissions it needs: `contents: read`, `pull-requests: write`,
   `statuses: write`.
+- **`/accept-tests` is optional and is the only thing that needs `contents: write`.** It runs on comments,
+  which GitHub starts from your default branch for anyone who can comment, so keep it in its own job as shown
+  in [docs/github-action.md](docs/github-action.md#accept-generated-tests-with-a-comment). Exhibit commits only
+  for people with write access, takes the test code only from its own report (never from the comment), writes
+  only a `*.exhibit.spec.ts` file into the folder named in `.exhibit.yml` on the default branch, and refuses
+  pull requests from forks. The job checks out the default branch, so no code from the pull request runs with
+  write access.
 - Set a spending limit on the API key's project at your provider, in addition to
   `model.max_cost_per_run_usd` in `.exhibit.yml` (default $1.50 per run).
 

@@ -66,9 +66,25 @@ Credentials are typed into the browser by Exhibit and never sent to the model.
 | `max_scenarios` | `8` | Most browser scenarios per run (1–20). Scenarios for the criteria come first; what did not fit is listed in the report. |
 | `scenario_timeout_s` | `600` | Seconds one browser scenario may take before it is stopped and reported as blocked. |
 
+## Generated tests
+
+Settings under `tests`.
+
+| Setting | Default | What it does |
+|---|---|---|
+| `dir` | `tests/exhibit` | Folder where a `/accept-tests` comment commits the generated Playwright file. A plain path inside the repository; it cannot contain `..` or point into `.github`. For this command the file is read from the default branch. |
+
+```yaml
+tests:
+  dir: e2e/exhibit
+```
+
+Accepting tests with a comment is off until you add its workflow:
+[github-action.md](github-action.md#accept-generated-tests-with-a-comment).
+
 ## Model
 
-All under `model:`.
+Settings under `model`.
 
 | Setting | Default | What it does |
 |---|---|---|

@@ -149,7 +149,8 @@ describe("every setting is documented (so nobody has to read the source to chang
     const shape = ConfigSchema.shape as Record<string, unknown>;
     const modelKeys = ["provider", "name", "max_cost_per_run_usd", "call_timeout_s", "price_per_mtok", "effort"];
     const authKeys = ["role", "login_flow", "username_env", "password_env"];
-    const missing = [...Object.keys(shape), ...modelKeys, ...authKeys].filter((k) => !doc.includes(`\`${k}\``));
+    const testsKeys = Object.keys(parseConfig({}).tests);
+    const missing = [...Object.keys(shape), ...modelKeys, ...authKeys, ...testsKeys].filter((k) => !doc.includes(`\`${k}\``));
     expect(missing).toEqual([]);
   });
 

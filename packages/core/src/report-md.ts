@@ -5,6 +5,10 @@ import type { RunReport } from "./run.js";
 /** Hidden marker that lets us find and update our own PR comment (E6-2). */
 export const COMMENT_MARKER = "<!-- exhibit-report -->";
 
+/** Hidden markers around the generated tests, so `/accept-tests` can read them back whatever the report's language. */
+export const testsStartMarker = (fileName: string) => `<!-- exhibit-tests file="${fileName}" -->`;
+export const TESTS_END_MARKER = "<!-- /exhibit-tests -->";
+
 const ICON = { pass: "✅", partial: "🟡", fail: "❌", unverified: "⚠️" } as const;
 const SCENARIO_ICON = { pass: "✅", fail: "❌", blocked: "⛔" } as const;
 
@@ -118,9 +122,15 @@ export function renderMarkdownReport(r: RunReport, links: MarkdownLinks = {}): s
     const n = r.generatedTests.scenarioIds.length;
     out.push(
       "",
+      // Hidden markers around the code: `/accept-tests` reads the tests back from this comment.
       `<details><summary>🧪 ${L.tests(n)} — <code>${r.generatedTests.fileName}</code></summary>`,
       "",
+      testsStartMarker(r.generatedTests.fileName),
       ...fence(r.generatedTests.content.trimEnd(), "ts"),
+      TESTS_END_MARKER,
+      "",
+      `_${L.acceptHint}_`,
+      "",
       "</details>",
     );
   }

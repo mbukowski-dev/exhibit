@@ -60,8 +60,9 @@ browser · ❌ the app behaves differently than the ticket says (never given wit
   only given for something seen in the running app, and a ✅ only after every expected result was checked.
 - **It says what it could not check.** E-mail delivery, a link that expires in 30 minutes, anything a browser
   cannot see is marked ⚠️ for a human instead of being guessed.
-- **You keep the tests.** Passing scenarios become plain Playwright tests, ready to commit. They run without
-  Exhibit and without AI.
+- **You keep the tests.** Passing scenarios become plain Playwright tests that run without Exhibit and without
+  AI. Comment `/accept-tests` on the pull request and they are committed to its branch
+  ([optional, one small workflow](docs/github-action.md#accept-generated-tests-with-a-comment)).
 - **Your language.** The review, the scenarios and the findings follow the language of each ticket, or one
   language you choose (`language: pl`) whatever the tickets are written in. Text quoted from your app is never
   translated. Your own heading for the criteria section ("Akzeptanzkriterien") is one line of configuration.

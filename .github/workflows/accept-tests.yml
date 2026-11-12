@@ -1,0 +1,27 @@
+# A "/accept-tests" comment on a pull request commits the tests Exhibit generated
+# to that pull request's branch. This file is also the example in docs/github-action.md.
+#
+# GitHub runs comment workflows from the default branch, with this repository's
+# permissions, for anyone who can comment. So:
+#  - the job only starts for a comment on a pull request that begins with /accept-tests;
+#  - it is the only job with `contents: write`, and it checks out nothing from the pull request;
+#  - Exhibit itself checks that the person has write access, takes the test code only from
+#    its own report, and refuses pull requests from forks.
+name: Exhibit accept tests
+on:
+  issue_comment:
+    types: [created]
+
+permissions: {}
+
+jobs:
+  accept-tests:
+    if: github.event.issue.pull_request && startsWith(github.event.comment.body, '/accept-tests')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write        # commit the test file to the pull request's branch
+      pull-requests: write   # reply in the pull request
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1 — the default branch: .exhibit.yml (tests.dir)
+      - uses: ./

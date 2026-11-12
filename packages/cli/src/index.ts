@@ -7,6 +7,7 @@ import { createRequire } from "node:module";
 // Single source of truth for the version: packages/cli/package.json (works from src/ and dist/).
 const CLI_VERSION: string = createRequire(import.meta.url)("../package.json").version;
 import {
+  acceptTests,
   buildContext,
   createMeter,
   createModel,
@@ -226,6 +227,18 @@ withModelOptions(program.command("ci"))
     if (!env.GITHUB_EVENT_PATH) throw new Error('"exhibit ci" runs inside GitHub Actions. Use "exhibit verify" locally.');
     if (!env.GITHUB_TOKEN) throw new Error("GITHUB_TOKEN is not set (pass github-token to the action).");
     const event = JSON.parse(await readFile(env.GITHUB_EVENT_PATH, "utf8"));
+
+    // A comment on a pull request: the only thing Exhibit does with one is /accept-tests.
+    // No model, no browser, and it is decided before anything else can run.
+    if (env.GITHUB_EVENT_NAME === "issue_comment" || (event.comment && event.issue)) {
+      const [owner, repo] = (env.GITHUB_REPOSITORY ?? event.repository?.full_name ?? "").split("/");
+      if (!owner || !repo) throw new Error("Cannot tell the repository (GITHUB_REPOSITORY is not set).");
+      const result = await acceptTests({ owner, repo, token: env.GITHUB_TOKEN, apiUrl: env.GITHUB_API_URL }, event, await loadConfig(opts.cwd));
+      console.log(result.message);
+      if (env.GITHUB_OUTPUT) await appendFile(env.GITHUB_OUTPUT, `verdict=skipped\naccept-tests=${result.outcome}\n`);
+      return;
+    }
+
     const pr = pullRequestFromEvent(event, env.GITHUB_REPOSITORY);
     const gh = { owner: pr.owner, repo: pr.repo, token: env.GITHUB_TOKEN, apiUrl: env.GITHUB_API_URL };
     const runUrl = env.GITHUB_RUN_ID ? `${env.GITHUB_SERVER_URL ?? "https://github.com"}/${pr.owner}/${pr.repo}/actions/runs/${env.GITHUB_RUN_ID}` : undefined;

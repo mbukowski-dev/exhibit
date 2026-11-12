@@ -9,7 +9,19 @@ export interface GitHubTarget {
   fetchImpl?: typeof fetch;
 }
 
-async function gh(t: GitHubTarget, method: string, path: string, body?: unknown): Promise<any> {
+/** A GitHub API answer that is not a success; `status` lets callers tell "not found" from a real failure. */
+export class GitHubError extends Error {
+  constructor(
+    readonly status: number,
+    message: string,
+  ) {
+    super(message);
+    this.name = "GitHubError";
+  }
+}
+
+/** One GitHub REST call with Exhibit's headers. Throws GitHubError when the answer is not a success. */
+export async function gh(t: GitHubTarget, method: string, path: string, body?: unknown): Promise<any> {
   const res = await (t.fetchImpl ?? fetch)(`${t.apiUrl ?? "https://api.github.com"}${path}`, {
     method,
     headers: {
@@ -23,7 +35,7 @@ async function gh(t: GitHubTarget, method: string, path: string, body?: unknown)
   });
   if (!res.ok) {
     const hint = res.status === 403 ? " (does the workflow have `pull-requests: write` / `statuses: write` permissions?)" : "";
-    throw new Error(`GitHub ${method} ${path} → ${res.status}${hint}: ${(await res.text()).slice(0, 300)}`);
+    throw new GitHubError(res.status, `GitHub ${method} ${path} → ${res.status}${hint}: ${(await res.text()).slice(0, 300)}`);
   }
   return res.status === 204 ? undefined : res.json();
 }

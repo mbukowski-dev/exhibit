@@ -30,3 +30,4 @@ export * from "./skip.js";
 export * from "./hints.js";
 export * from "./provider-errors.js";
 export * from "./language.js";
+export * from "./accept-tests.js";

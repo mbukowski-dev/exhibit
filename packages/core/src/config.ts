@@ -71,6 +71,23 @@ export const ConfigSchema = z.object({
   max_scenarios: z.number().int().min(1).max(20).default(8),
   /** Seconds one browser scenario may take before it is stopped and reported as blocked. */
   scenario_timeout_s: z.number().int().positive().default(600),
+  /** Generated tests. */
+  tests: z
+    .object({
+      /**
+       * Folder in the repository where `/accept-tests` commits the generated test file.
+       * A plain relative path: it cannot leave the repository or point into .github.
+       */
+      dir: z
+        .string()
+        .trim()
+        .regex(/^(?!\/)(?!\.github(\/|$))(?!.*\.\.)[A-Za-z0-9._\/-]{1,120}$/, {
+          message: "tests.dir must be a folder inside the repository, e.g. tests/exhibit (no leading /, no .., not .github)",
+        })
+        .transform((d) => d.replace(/\/+$/, ""))
+        .default("tests/exhibit"),
+    })
+    .prefault({}),
   /**
    * Facts about the test environment that are not in the ticket: test accounts,
    * seed data, feature flags, things that must not be touched. Given to the

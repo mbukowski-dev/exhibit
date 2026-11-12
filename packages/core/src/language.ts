@@ -49,6 +49,7 @@ export interface Labels {
   unblock: string;
   notRun: string;
   tests: (n: number) => string;
+  acceptHint: string;
   artifacts: string;
   tested: string;
   changed: (author: string, date: string) => string;
@@ -62,6 +63,8 @@ export interface Labels {
     noScenario: string;
   };
 }
+
+const ACCEPT_DOCS = "https://github.com/mbukowski-dev/exhibit/blob/main/docs/github-action.md#accept-generated-tests-with-a-comment";
 
 const EN: Labels = {
   pass: "✅ All acceptance criteria verified",
@@ -79,6 +82,7 @@ const EN: Labels = {
   unblock: "To get the blocked scenarios checked",
   notRun: "Not run (limit `max_scenarios`)",
   tests: (n) => `${n} generated Playwright test${n > 1 ? "s" : ""}`,
+  acceptHint: `To commit this file to the pull request, comment \`/accept-tests\` ([one-time setup](${ACCEPT_DOCS})).`,
   artifacts: "Videos & traces",
   tested: "tested",
   changed: (author, date) => `changed in a ticket comment by ${author} (${date})`,
@@ -108,6 +112,7 @@ const PL: Labels = {
   unblock: "Co odblokuje zablokowane scenariusze",
   notRun: "Nie uruchomiono (limit `max_scenarios`)",
   tests: (n) => `Wygenerowane testy Playwright: ${n}`,
+  acceptHint: `Aby zacommitować ten plik do pull requesta, napisz komentarz \`/accept-tests\` ([jednorazowa konfiguracja](${ACCEPT_DOCS})).`,
   artifacts: "Nagrania i ślady",
   tested: "testowano",
   changed: (author, date) => `zmienione w komentarzu do ticketu przez ${author} (${date})`,
