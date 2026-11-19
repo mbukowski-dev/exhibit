@@ -147,6 +147,18 @@ describe("/accept-tests commits the generated tests to the pull request (E13-6)"
     expect(Buffer.from(commits(both.writes)[0]!.body.content, "base64").toString("utf8")).toBe(TEST_CODE);
   });
 
+  it("never takes code from another bot, even one installed on the repository", async () => {
+    // Apps installed on a repository can comment, and some quote text written by users.
+    const otherBot = { user: { login: "vercel[bot]", type: "Bot" }, body: reportBody().replace("Forgot password?", "PWNED") };
+    const alone = fakeGitHub(world({ comments: [otherBot] }));
+    expect((await acceptTests(alone.target, comment("/accept-tests"), config)).outcome).toBe("refused");
+    expect(commits(alone.writes)).toEqual([]);
+    // Posted after Exhibit's own report: the real report is still the one used.
+    const both = fakeGitHub(world({ comments: [...world().comments, otherBot] }));
+    await acceptTests(both.target, comment("/accept-tests"), config);
+    expect(Buffer.from(commits(both.writes)[0]!.body.content, "base64").toString("utf8")).toBe(TEST_CODE);
+  });
+
   it("accepts a report posted by a person with write access (a token of their own instead of the workflow's)", async () => {
     const { target, writes } = fakeGitHub(world({ comments: [{ user: { login: "ana", type: "User" }, body: reportBody() }] }));
     expect((await acceptTests(target, comment("/accept-tests"), config)).outcome).toBe("committed");

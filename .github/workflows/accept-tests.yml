@@ -5,8 +5,10 @@
 # permissions, for anyone who can comment. So:
 #  - the job only starts for a comment on a pull request that begins with /accept-tests;
 #  - it is the only job with `contents: write`, and it checks out nothing from the pull request;
+#  - the checkout does not keep the token in .git/config (Exhibit commits through the API), so the
+#    packages installed in the next step cannot pick up a token that may write to the repository;
 #  - Exhibit itself checks that the person has write access, takes the test code only from
-#    its own report, and refuses pull requests from forks.
+#    its own report (posted by github-actions[bot]), and refuses pull requests from forks.
 name: Exhibit accept tests
 on:
   issue_comment:
@@ -24,4 +26,6 @@ jobs:
       pull-requests: write   # reply in the pull request
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1 — the default branch: .exhibit.yml (tests.dir)
+        with:
+          persist-credentials: false
       - uses: ./
