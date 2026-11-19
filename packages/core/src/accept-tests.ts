@@ -10,7 +10,8 @@ import { COMMENT_MARKER, untrusted } from "./report-md.js";
  * branch with the workflow's secrets — so nothing here trusts the comment:
  *  - the person who asked must have write access to the repository;
  *  - the test code is taken only from Exhibit's own report (a comment written
- *    by a bot, or by someone with write access), never from the request;
+ *    by the workflow's github-actions[bot], or by someone with write access),
+ *    never from the request and never from another bot;
  *  - pull requests from forks are refused;
  *  - the file name comes from the report and must look like a generated test,
  *    and the folder comes from .exhibit.yml on the default branch.
@@ -55,6 +56,12 @@ async function canWrite(t: GitHubTarget, login: string, cache: Map<string, boole
   return ok;
 }
 
+/**
+ * The account Exhibit's report is posted as when the workflow uses its own GITHUB_TOKEN. Other bots are
+ * not trusted: any app installed on the repository can comment, and some quote text written by users.
+ */
+export const WORKFLOW_BOT = "github-actions[bot]";
+
 /** Exhibit's latest report on the pull request, from an author we can trust. */
 async function findReport(t: GitHubTarget, pr: number, cache: Map<string, boolean>): Promise<string | undefined> {
   let found: string | undefined;
@@ -62,9 +69,12 @@ async function findReport(t: GitHubTarget, pr: number, cache: Map<string, boolea
     const comments = (await gh(t, "GET", `/repos/${t.owner}/${t.repo}/issues/${pr}/comments?per_page=100&page=${page}`)) as any[];
     for (const c of comments) {
       if (typeof c.body !== "string" || !c.body.includes(COMMENT_MARKER)) continue;
-      // Anyone can post a comment that contains the marker. Only a bot (the workflow) or a person
+      // Anyone can post a comment that contains the marker. Only the workflow's own bot or a person
       // who could push the file anyway may be the source of code that gets committed.
-      if (c.user?.type === "Bot" || (c.user?.login && (await canWrite(t, c.user.login, cache)))) found = c.body;
+      const login: string | undefined = c.user?.login;
+      if (!login) continue;
+      const trusted = c.user?.type === "Bot" ? login === WORKFLOW_BOT : await canWrite(t, login, cache);
+      if (trusted) found = c.body;
     }
     if (comments.length < 100) break;
   }

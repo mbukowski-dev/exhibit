@@ -86,6 +86,8 @@ jobs:
       pull-requests: write   # reply in the pull request
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false   # don't leave a token that may write to the repo in .git/config
       - uses: mbukowski-dev/exhibit@<full commit SHA of the release you use>
 ```
 

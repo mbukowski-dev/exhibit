@@ -5,7 +5,9 @@
 - New, opt-in: a `/accept-tests` comment on a pull request commits the generated Playwright tests to its
   branch (folder: `tests.dir`, default `tests/exhibit`). It needs one extra workflow with `contents: write`,
   shown in docs/github-action.md. Exhibit commits only for people with write access, takes the code only from
-  its own report and refuses pull requests from forks.
+  its own report (posted by `github-actions[bot]` or a person with write access, never another bot) and refuses
+  pull requests from forks. The example workflow checks out with `persist-credentials: false`, so no token
+  that may write to the repository is left on disk while packages are installed.
 - New `language` setting: `auto` (default) writes in the language of each ticket; a code or a name (`pl`,
   `Polish`, `Deutsch`) fixes the language of the review, the scenarios and the findings, whatever language the
   ticket is in. The browser agent now follows it too. Text quoted from the app or the ticket is never
